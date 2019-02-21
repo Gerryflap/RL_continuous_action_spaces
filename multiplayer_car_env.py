@@ -1,3 +1,9 @@
+"""
+    A 2-player game.
+    The blue car has to reach the Green target circle to win without leaving the screen.
+    The red car has to tag the blue car to win, but is not allowed to enter the target circle (this costs points).
+"""
+
 import math
 import random
 import time
