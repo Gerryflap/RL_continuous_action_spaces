@@ -6,12 +6,12 @@ import simple_policy_optimization as spo
 import car_env
 ks = tf.keras
 
-SEED = 1337
+SEED = 420
 tf.set_random_seed(SEED)
 car_env.set_random_seed(SEED)
 
 model = ks.models.Sequential()
-model.add(ks.layers.Dense(24, activation='tanh', input_shape=(4,)))
+model.add(ks.layers.Dense(24, activation='tanh', input_shape=(6,)))
 model.add(ks.layers.Dense(12, activation='tanh'))
 model.add(ks.layers.Dense(2, activation='tanh'))
 

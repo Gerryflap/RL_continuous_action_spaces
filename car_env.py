@@ -118,8 +118,8 @@ class CarEnv(object):
             angle_error -= math.pi
             angle_error /= math.pi
 
-            return np.array([self.car.x / screen_width, self.car.y / screen_height, angle_error ,
-                             self.car.speed * 0.1])
+            return np.array([self.car.x / screen_width, self.car.y / screen_height, angle_error,
+                             distance_to_target, self.car.angle/(2*math.pi), self.car.speed * 0.1])
 
 
 
