@@ -11,10 +11,11 @@ tf.set_random_seed(SEED)
 car_env.set_random_seed(SEED)
 
 model = ks.models.Sequential()
-model.add(ks.layers.Dense(12, activation='selu', input_shape=(4,)))
+model.add(ks.layers.Dense(24, activation='tanh', input_shape=(4,)))
+model.add(ks.layers.Dense(12, activation='tanh'))
 model.add(ks.layers.Dense(2, activation='tanh'))
 
-policy = spo.SimplePolicyOptimizer(model, 2, scale_value=0.3, gamma=0.99, lr=0.001)
+policy = spo.SimplePolicyOptimizer(model, 2, scale_value=0.3, gamma=0.9, lr=0.001)
 env = car_env.CarEnv(True)
 
 with tf.Session() as sess:
