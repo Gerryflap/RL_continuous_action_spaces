@@ -1,4 +1,4 @@
-# RL_continuous_action_spaces
+# RL Continuous Action Spaces
 ## An exploration of continuous action spaces in Reinforcement Learning
 
 This repository is a small experiment with continuous action spaces in reinforcement learning. 
@@ -12,3 +12,5 @@ Up until now this repo contains:
   - `MPCarEnv`, which has 2 agents: blue tries to reach the target and red aims to tag the blue car before it reaches the target.
   
   
+## An example of the `MPCarEnv`:
+![alt text](https://github.com/Gerryflap/RL_continuous_action_spaces/blob/master/MPCarEnv.gif?raw=true "MPCarEnv")
