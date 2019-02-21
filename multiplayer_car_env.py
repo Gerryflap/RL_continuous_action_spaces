@@ -35,6 +35,7 @@ def distance(pos1, pos2):
 def is_in_bounds(x, y):
     return 0 <= x <= screen_width and 0 <= y <= screen_height
 
+
 def calc_angle_error_and_dist(car, pos):
     angle_to_target = math.atan2(car.y - pos[1], car.x - pos[0])
     distance_to_target = distance(car.pos(), pos)
@@ -43,6 +44,7 @@ def calc_angle_error_and_dist(car, pos):
     angle_error -= math.pi
     angle_error /= math.pi
     return angle_error, distance_to_target
+
 
 scale_factor = distance((0, 0), (screen_width, screen_height))
 
@@ -90,7 +92,7 @@ class MPCarEnv(object):
 
         # Spawn on opposing side:
         # self.car_1 = Car(screen_width - 1 - self.target[0], screen_height - 1 - self.target[1])
-        self.car_1 =Car(random.randint(0, screen_width - 1), random.randint(0, screen_height - 1))
+        self.car_1 = Car(random.randint(0, screen_width - 1), random.randint(0, screen_height - 1))
         self.car_2 = Car(random.randint(0, screen_width - 1), random.randint(0, screen_height - 1), color=(200, 50, 50))
         self.done = False
         self.steps = 0
@@ -120,7 +122,6 @@ class MPCarEnv(object):
         dist_1 = distance(self.car_1.pos(), self.target)
         dist_2 = distance(self.car_1.pos(), self.car_2.pos())
         dist_2_target = distance(self.target, self.car_2.pos())
-
 
         r_1 = (prev_dist_1 - dist_1) / scale_factor - 0.001
         r_2 = (prev_dist_2 - dist_2) / scale_factor - 0.001
@@ -158,4 +159,3 @@ class MPCarEnv(object):
                              c2_angle_error_other, c2_dist_target, c2_dist_other, self.car_2.speed * 0.1])
 
         return c1_state, c2_state
-
