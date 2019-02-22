@@ -1,9 +1,9 @@
 import time
 
 import tensorflow as tf
-import numpy as np
-import simple_policy_optimization as spo
-import car_env
+from algorithms import simple_policy_optimization as spo
+from environments import car_env
+
 ks = tf.keras
 
 SEED = 420
