@@ -28,14 +28,14 @@ def make_model():
 
 
 initial_rnn_state = np.zeros((1, 32))
-policy_1 = spornn.SimplePolicyOptimizerRNN(make_model(), 2, initial_rnn_state, scale_value=0.003, gamma=0.9, lr=0.0003)
-policy_2 = spornn.SimplePolicyOptimizerRNN(make_model(), 2, initial_rnn_state, scale_value=0.001, gamma=0.9, lr=0.0003)
+policy_1 = spornn.SimplePolicyOptimizerRNN(make_model(), 2, initial_rnn_state, scale_value=0.003, gamma=0.9, lr=0.001)
+policy_2 = spornn.SimplePolicyOptimizerRNN(make_model(), 2, initial_rnn_state, scale_value=0.001, gamma=0.9, lr=0.001)
 env = multiplayer_car_env.MPCarEnv(
     allow_red_to_enter_target_zone=False,
     force_fair_game=True,
     speed_limits=(-2, 20),
-    throttle_scale=0.5,
-    steer_scale=0.1
+    throttle_scale=2.0,
+    steer_scale=0.5
 )
 
 with tf.Session() as sess:
@@ -69,7 +69,7 @@ with tf.Session() as sess:
         policy_1.train(sess, trajectory_1, scale)
         policy_2.train(sess, trajectory_2, scale)
 
-        scale *= 0.9997
+        scale *= 0.999
         if scale < 0.2:
             scale = 0.2
         print(scale, score_1, score_2)
