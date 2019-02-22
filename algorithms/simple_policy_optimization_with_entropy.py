@@ -16,7 +16,8 @@ class SimplePolicyOptimizerWithEntropy(object):
         :param n_actions: The number of continuous actions the environment uses
         :param lr: The learning rate used by the Adam optimizer
         :param gamma: Discount factor used in the computation of the expected discounted reward
-        :param scale_value: The default value for the scale of the normal distributions
+        :param entropy_factor: Is multiplied in the loss function with the summed entropy.
+            Lower values will encourage exploitation, higher values will encourage exploration.
         """
         self.gamma = gamma
 
