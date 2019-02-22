@@ -20,8 +20,8 @@ model2.add(ks.layers.Dense(24, activation='tanh', input_shape=(7,)))
 model2.add(ks.layers.Dense(12, activation='tanh'))
 model2.add(ks.layers.Dense(2, activation='tanh'))
 
-policy_1 = spo.SimplePolicyOptimizer(model1, 2, scale_value=0.3, gamma=0.9, lr=0.001)
-policy_2 = spo.SimplePolicyOptimizer(model2, 2, scale_value=0.3, gamma=0.9, lr=0.001)
+policy_1 = spo.SimplePolicyOptimizer(model1, 2, scale_value=0.003, gamma=0.9, lr=0.001)
+policy_2 = spo.SimplePolicyOptimizer(model2, 2, scale_value=0.001, gamma=0.9, lr=0.001)
 env = multiplayer_car_env.MPCarEnv()
 
 with tf.Session() as sess:

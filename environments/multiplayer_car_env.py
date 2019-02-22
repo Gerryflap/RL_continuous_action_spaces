@@ -127,21 +127,21 @@ class MPCarEnv(object):
         r_2 = (prev_dist_2 - dist_2) / scale_factor - 0.001
 
         if not is_in_bounds(self.car_1.x, self.car_1.y) or self.steps > 1000:
-            r_1 -= 10
+            r_1 -= 1
             self.done = True
 
         if dist_1 < 30:
-            r_1 += 10
-            r_2 -= 10
+            r_1 += 1
+            r_2 -= 1
             self.done = True
 
         if dist_2 < 20:
-            r_1 -= 10
-            r_2 += 10
+            r_1 -= 1
+            r_2 += 1
             self.done = True
 
         if dist_2_target < 30:
-            r_2 -= 1
+            r_2 -= 0.1
 
         return self.__state__(), (r_1, r_2), self.done, None
 
