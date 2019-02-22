@@ -1,6 +1,6 @@
 """
     Applies the SPO algorithm to the MPCarEnv.
-    The parameters below will result in decent policies for both players.
+    Results: The parameters below will result in decent policies for both players.
 """
 
 import time

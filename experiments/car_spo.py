@@ -1,3 +1,8 @@
+"""
+    Applies SPO to the CarEnv
+    Results: As the scale parameter decays, performance increases. The agent becomes consistent very quickly
+"""
+
 import time
 
 import tensorflow as tf

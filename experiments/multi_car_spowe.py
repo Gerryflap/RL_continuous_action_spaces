@@ -1,6 +1,6 @@
 """
     Applies the SPOWE algorithm to the MPCarEnv.
-    This experiment is hard to balance and usually one agent will dominate the other.
+    Results: This experiment is hard to balance and usually one agent will dominate the other.
 """
 
 import time

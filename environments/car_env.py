@@ -83,7 +83,7 @@ class CarEnv(object):
             pygame.init()
             self.surf = pygame.display.set_mode((screen_width, screen_height))
         self.surf.fill((50, 50, 50))
-        pygame.draw.circle(self.surf, (200, 50, 50), self.target, 30)
+        pygame.draw.circle(self.surf, (50, 200, 50), self.target, 30)
         self.car.draw(self.surf)
         pygame.display.flip()
 
@@ -98,11 +98,11 @@ class CarEnv(object):
         r = (prev_dist - dist)/scale_factor - 0.001
 
         if not is_in_bounds(self.car.x, self.car.y) or self.steps > 1000:
-            r -= 10
+            r -= 1
             self.done = True
 
         if dist < 30:
-            r += 10
+            r += 1
             self.done = True
         return self.__state__(), r, self.done, None
 

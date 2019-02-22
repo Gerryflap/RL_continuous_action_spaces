@@ -1,6 +1,7 @@
 """
     Applies the AAC algorithm to the MPCarEnv.
-    The parameters below do result in decent policies, although very different compared to SPO
+    Results: The parameters below do result in decent policies, although very different compared to SPO.
+        Balance issues may occur
 """
 
 import time
@@ -36,8 +37,8 @@ def create_value_model():
     return model
 
 
-agent_1 = aac.AdvantageActorCritic(create_policy_model(), create_value_model(), 2, lr=0.001, gamma=0.9, entropy_factor=0.1)
-agent_2 = aac.AdvantageActorCritic(create_policy_model(), create_value_model(), 2, lr=0.001, gamma=0.9, entropy_factor=0.1)
+agent_1 = aac.AdvantageActorCritic(create_policy_model(), create_value_model(), 2, lr=0.001, gamma=0.9, entropy_factor=0.05)
+agent_2 = aac.AdvantageActorCritic(create_policy_model(), create_value_model(), 2, lr=0.001, gamma=0.9, entropy_factor=0.03)
 env = multiplayer_car_env.MPCarEnv()
 
 with tf.Session() as sess:
