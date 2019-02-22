@@ -1,5 +1,9 @@
-import time
+"""
+    Applies the SPO algorithm to the MPCarEnv.
+    The parameters below will result in decent policies for both players.
+"""
 
+import time
 import tensorflow as tf
 from algorithms import simple_policy_optimization as spo
 from environments import multiplayer_car_env
