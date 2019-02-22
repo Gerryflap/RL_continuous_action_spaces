@@ -50,21 +50,24 @@ scale_factor = distance((0, 0), (screen_width, screen_height))
 
 
 class Car(object):
-    def __init__(self, x, y, color=(50, 150, 200)):
+    def __init__(self, x, y, speed_limits=(-2, 10), throttle_scale=0.2, steer_scale=5e-1, color=(50, 150, 200)):
         self.x = x
         self.y = y
         self.speed = 0
         self.angle = 0
         self.points = [(8, 5), (8, -5), (-8, -5), (-8, 5), (8, 5)]
         self.color = color
+        self.speed_limits = speed_limits
+        self.throttle_scale = throttle_scale
+        self.steer_scale = steer_scale
 
     def step(self, throttle, steer):
-        throttle = max(-1, min(1, throttle)) * 0.2
-        steer = max(-1, min(1, steer)) * 5e-1
+        throttle = max(-1, min(1, throttle)) * self.throttle_scale
+        steer = max(-1, min(1, steer)) * self.steer_scale
 
         self.speed += throttle
         # Clip speed
-        self.speed = max(-2, min(10, self.speed))
+        self.speed = max(self.speed_limits[0], min(self.speed_limits[1], self.speed))
         self.angle = (self.angle + steer) % (2 * math.pi)
         self.x += self.speed * math.cos(self.angle)
         self.y += self.speed * math.sin(self.angle)
@@ -79,7 +82,7 @@ class Car(object):
 
 
 class MPCarEnv(object):
-    def __init__(self, allow_red_to_enter_target_zone=False):
+    def __init__(self, allow_red_to_enter_target_zone=False, force_fair_game=False, speed_limits=(-2, 10), throttle_scale=0.2, steer_scale=5e-1):
         self.car_1 = None
         self.car_2 = None
         self.target = None
@@ -87,14 +90,27 @@ class MPCarEnv(object):
         self.surf = None
         self.done = True
         self.allow_red_to_enter_target_zone = allow_red_to_enter_target_zone
+        self.force_fair_game = force_fair_game
+        self.speed_limits = speed_limits
+        self.throttle_scale = throttle_scale
+        self.steer_scale = steer_scale
 
     def reset(self):
         self.target = random.randint(0, screen_width - 1), random.randint(0, screen_height - 1)
 
-        # Spawn on opposing side:
-        # self.car_1 = Car(screen_width - 1 - self.target[0], screen_height - 1 - self.target[1])
-        self.car_1 = Car(random.randint(0, screen_width - 1), random.randint(0, screen_height - 1))
-        self.car_2 = Car(random.randint(0, screen_width - 1), random.randint(0, screen_height - 1), color=(200, 50, 50))
+        self.car_1 = Car(random.randint(0, screen_width - 1), random.randint(0, screen_height - 1),
+                         self.speed_limits, self.throttle_scale, self.steer_scale)
+        while self.force_fair_game and \
+                (distance(self.car_1.pos(), self.target) < 200 or distance(self.car_1.pos(), self.target)) > 800:
+            self.car_1 = Car(random.randint(0, screen_width - 1), random.randint(0, screen_height - 1),
+                             self.speed_limits, self.throttle_scale, self.steer_scale)
+
+        self.car_2 = Car(random.randint(0, screen_width - 1), random.randint(0, screen_height - 1),
+                         self.speed_limits, self.throttle_scale, self.steer_scale, color=(200, 50, 50))
+        while self.force_fair_game and \
+                distance(self.car_1.pos(), self.target) < distance(self.car_2.pos(), self.target):
+            self.car_2 = Car(random.randint(0, screen_width - 1), random.randint(0, screen_height - 1),
+                             self.speed_limits, self.throttle_scale, self.steer_scale, color=(200, 50, 50))
         self.done = False
         self.steps = 0
         return self.__state__()
