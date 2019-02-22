@@ -1,6 +1,6 @@
 """
     Applies the SPO-RNN algorithm to the MPCarEnv.
-    Results: The parameters below will result in decent policies for both players.
+    Results: X
 """
 
 import time
@@ -28,9 +28,9 @@ def make_model():
 
 
 initial_rnn_state = np.zeros((1, 32))
-policy_1 = spornn.SimplePolicyOptimizerRNN(make_model(), 2, initial_rnn_state, scale_value=0.003, gamma=0.9, lr=0.001)
-policy_2 = spornn.SimplePolicyOptimizerRNN(make_model(), 2, initial_rnn_state, scale_value=0.001, gamma=0.9, lr=0.001)
-env = multiplayer_car_env.MPCarEnv()
+policy_1 = spornn.SimplePolicyOptimizerRNN(make_model(), 2, initial_rnn_state, scale_value=0.003, gamma=0.95, lr=0.001)
+policy_2 = spornn.SimplePolicyOptimizerRNN(make_model(), 2, initial_rnn_state, scale_value=0.001, gamma=0.95, lr=0.001)
+env = multiplayer_car_env.MPCarEnv(allow_red_to_enter_target_zone=True)
 
 with tf.Session() as sess:
     sess.run(tf.global_variables_initializer())

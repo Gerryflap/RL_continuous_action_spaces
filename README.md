@@ -4,8 +4,9 @@
 This repository is a small experiment with continuous action spaces in reinforcement learning. 
 
 Up until now this repo contains:
-- 3 algorithms:
+- 4 algorithms:
   - Simple Policy Optimization, which maximizes action probabilities weighted by their episodic discounted rewards. For exploration it uses an adjustible normal distribution scale parameter.
+  - SPO-RNN, which is exactly the same as the one above, but is built for RNN models (GRU advised) and can use this RNN for memorizing earlier events.
   - Simple Policy Optimization With Entropy, which maximizes action probabilities weighted by their episodic discounted rewards. For exploration it uses entropy regularization. Both mean and scale are model outputs.
   - Advantage Actor Critic, which uses 2 networks. The Critic learns to predict the state -> value function, while the Actor learns to act such that the advantage (value improvement over predicted value by Critic) and entropy are maximized. (implementation not directly based on paper)
 
