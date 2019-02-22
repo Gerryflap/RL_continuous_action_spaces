@@ -79,13 +79,14 @@ class Car(object):
 
 
 class MPCarEnv(object):
-    def __init__(self):
+    def __init__(self, allow_red_to_enter_target_zone=False):
         self.car_1 = None
         self.car_2 = None
         self.target = None
         self.steps = 0
         self.surf = None
         self.done = True
+        self.allow_red_to_enter_target_zone = allow_red_to_enter_target_zone
 
     def reset(self):
         self.target = random.randint(0, screen_width - 1), random.randint(0, screen_height - 1)
@@ -140,7 +141,7 @@ class MPCarEnv(object):
             r_2 += 1
             self.done = True
 
-        if dist_2_target < 30:
+        if dist_2_target < 30 and not self.allow_red_to_enter_target_zone:
             r_2 -= 0.1
 
         return self.__state__(), (r_1, r_2), self.done, None
