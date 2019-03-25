@@ -7,8 +7,6 @@ def data_receiver(sock: socket.SocketType, queue: Queue, buff_size=1024):
     buffer = b""
 
     while True:
-        received = sock.recv(buff_size)
-        buffer += received
         if len(buffer) > 4:
             size = buffer[:4]
             size = int.from_bytes(size, 'big')
@@ -16,6 +14,14 @@ def data_receiver(sock: socket.SocketType, queue: Queue, buff_size=1024):
             if len(buffer) >= 4 + size:
                 queue.put(buffer[4:4+size])
                 buffer = buffer[4+size:]
+                continue
+
+        received = sock.recv(buff_size)
+        if len(received) == 0:
+            print("Received 0 bytes, exiting client thread...")
+            queue.put("EXIT".encode())
+            break
+        buffer += received
 
 
 def start_recv_thread(sock, queue: Queue, buff_size=1024):

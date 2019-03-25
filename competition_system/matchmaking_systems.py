@@ -36,7 +36,10 @@ class RandomMatchMakingSystem(MatchmakingSystem):
 
     def get_matches(self, active_pids, max_matches=None) -> list:
         active_pids = list(active_pids)
-        n_matches = min(len(active_pids)//2, max_matches)
+        if max_matches is not None:
+            n_matches = min(len(active_pids)//2, max_matches)
+        else:
+            n_matches = len(active_pids) // 2
         return list(zip(active_pids[:n_matches], active_pids[-n_matches:]))
 
     def report_outcome(self, pid1: int, pid2: int, outcome: int):
