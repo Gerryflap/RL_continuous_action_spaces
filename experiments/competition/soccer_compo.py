@@ -116,7 +116,7 @@ def run_server():
 
 server_thread = mp.Process(target=run_server)
 server_thread.start()
-algos = list([random.choice(["spo", "spowe", "spornn", "ac", "random", "dummy"]) for i in range(64)])
+algos = list([random.choice(["spo", "spowe", "spornn", "ac", "random", "dummy"]) for i in range(24)])
 
 for algo in algos:
     process = mp.Process(target=run_policy, args=(algo,))

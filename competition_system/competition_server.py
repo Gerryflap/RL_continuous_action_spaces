@@ -28,6 +28,7 @@ class CompetitionServer(object):
         self.deregister_queue = mp.Queue()
         self.register_queue = mp.Queue()
         self.join_queue_queue = mp.Queue()
+        self.connect_queue = mp.Queue()
         self.play_match = play_match_function
         self.matchmaking = matchmaking
 
@@ -59,10 +60,13 @@ class CompetitionServer(object):
                 print("Started client thread")
                 self.unregistered_clients[pid] = client
 
+            while not self.connect_queue.empty():
+                pid, info = self.connect_queue.get(False)
+                self.unregistered_clients[pid].info_str = info
+
             while not self.deregister_queue.empty():
                 pid = self.deregister_queue.get(False)
                 self.clients.pop(pid)
-
 
             while not self.register_queue.empty():
                 pid = self.register_queue.get(False)
@@ -70,11 +74,11 @@ class CompetitionServer(object):
                 self.clients[pid] = self.unregistered_clients[pid]
                 self.unregistered_clients.pop(pid)
 
-
-
             while not self.join_queue_queue.empty():
                 pid = self.join_queue_queue.get(False)
                 self.queue.add(pid)
+
+
 
 
 
@@ -158,6 +162,7 @@ class Client(object):
             elif cstr == "CONNECT":
                 if len(command) > 1:
                     self.info_str = " ".join(command[1:])
+                    self.server.connect_queue.put((self.pid, self.info_str))
 
             elif cstr == "REGISTER":
                 pid = None

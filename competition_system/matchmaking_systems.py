@@ -1,6 +1,7 @@
 """
     Models different matchmaking/ranking systems
 """
+import random
 from abc import ABC, abstractmethod
 from collections import defaultdict
 
@@ -36,11 +37,14 @@ class RandomMatchMakingSystem(MatchmakingSystem):
 
     def get_matches(self, active_pids, max_matches=None) -> list:
         active_pids = list(active_pids)
+
         if max_matches is not None:
             n_matches = min(len(active_pids)//2, max_matches)
         else:
             n_matches = len(active_pids) // 2
-        return list(zip(active_pids[:n_matches], active_pids[-n_matches:]))
+        other_players = active_pids[-n_matches:]
+        random.shuffle(other_players)
+        return list(zip(active_pids[:n_matches], other_players))
 
     def report_outcome(self, pid1: int, pid2: int, outcome: int):
         if outcome == 1:
