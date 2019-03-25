@@ -18,7 +18,7 @@ def text_to_screen(screen, text, x, y, size = 10,
 
 
 class SoccerEnvironment(object):
-    action_space = 5
+    action_space = 2
     width = 600
     height = 300
     circle_radius = 25
@@ -202,11 +202,11 @@ class SoccerEnvironment(object):
         x, y = self.ball_pos
         if x > self.width:
             self.reset()
-            return (1.0, -0.5), True
+            return (1.0, -1.0), True
         x, y = self.ball_pos
         if x < 0:
             self.reset()
-            return (-0.5, 1.0), True
+            return (-1.0, 1.0), True
         if self.steps > self.max_steps:
             self.reset()
             return (-1.0, -1.0), True

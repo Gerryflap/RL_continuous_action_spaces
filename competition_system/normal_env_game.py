@@ -7,7 +7,6 @@ def get_runner(env_builder, log=False):
         print("Game thread started with ", client1.pid, client2.pid)
         env = env_builder()
         s1, s2 = env.reset()
-        print(s1.shape, s2.shape)
         done = False
         client1.send_srd(s1)
         client2.send_srd(s2)

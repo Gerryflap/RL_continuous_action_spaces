@@ -15,16 +15,18 @@ from competition_system import util
 
 LOG_TIME = 30
 
+
 class CompetitionServer(object):
     def __init__(self, play_match_function, matchmaking: ms.MatchmakingSystem, addr="127.0.0.1", port=1337):
         self.addr = addr
         self.port = port
         self.max_pid = 0
-        self.unregistered_clients = set()
+        self.unregistered_clients = dict()
         self.clients = dict()
         self.queue = set()
         self.match_result_queue = mp.Queue()
         self.deregister_queue = mp.Queue()
+        self.register_queue = mp.Queue()
         self.join_queue_queue = mp.Queue()
         self.play_match = play_match_function
         self.matchmaking = matchmaking
@@ -47,12 +49,38 @@ class CompetitionServer(object):
 
         while True:
             while not socket_queue.empty():
+                print("Starting new client")
                 client_sock = socket_queue.get(False)
-                self.unregistered_clients.add(Client(self, client_sock))
+                pid = self.max_pid
+                self.max_pid += 1
+                client = Client(self, client_sock)
+                client.pid = pid
+                mp.Process(target=run_client_thread, args=(client,)).start()
+                print("Started client thread")
+                self.unregistered_clients[pid] = client
 
-            clients = list(self.clients.values()) + list(self.unregistered_clients)
-            for client in clients:
-                client.process_commands()
+            while not self.deregister_queue.empty():
+                pid = self.deregister_queue.get(False)
+                self.clients.pop(pid)
+
+
+            while not self.register_queue.empty():
+                pid = self.register_queue.get(False)
+                print(pid)
+                self.clients[pid] = self.unregistered_clients[pid]
+                self.unregistered_clients.pop(pid)
+
+
+
+            while not self.join_queue_queue.empty():
+                pid = self.join_queue_queue.get(False)
+                self.queue.add(pid)
+
+
+
+            # clients = list(self.clients.values()) + list(self.unregistered_clients)
+            # for client in clients:
+            #     client.process_commands()
 
             if len(self.queue) >= 2 and len(self.queue) >= 0.2*len(self.clients):
                 matches = self.matchmaking.get_matches(self.queue)
@@ -79,36 +107,39 @@ class CompetitionServer(object):
 
                 last_log = time.time()
                 ticks = 0
+            time.sleep(0.01)
 
     def unregister_client(self, pid):
-        self.clients.pop(pid)
+        self.deregister_queue.put(pid)
 
-    def register_client(self, client, pid=None):
-        if pid is None:
-            # Assign new player identifier
-            pid = self.max_pid
-            self.max_pid += 1
-
-        self.clients[pid] = client
-        self.unregistered_clients.remove(client)
-
-        client.accept_registration(pid)
+    def register_client(self, pid):
+        self.register_queue.put(pid)
 
     def add_to_queue(self, pid):
-        self.queue.add(pid)
+        self.join_queue_queue.put(pid)
+
+
+def run_client_thread(client):
+    print("Running client...")
+    while client.running:
+        client.process_commands()
 
 
 class Client(object):
-    def __init__(self, server: CompetitionServer, socket):
+    def __init__(self, server: CompetitionServer, sock):
         self.server = server
-        self.socket = socket
+        self.socket = sock
         self.pid = None
-        self.byte_queue = Queue()
+        self.byte_queue = mp.Queue()
         self.act_queue = mp.Queue()
-        self.thread = util.start_recv_thread(socket, self.byte_queue)
+        self.thread = None
         self.info_str = ""
+        self.running = True
 
     def process_commands(self):
+        if self.thread is None:
+            self.thread = util.start_recv_thread(self.socket, self.byte_queue)
+
         while not self.byte_queue.empty():
             command = self.byte_queue.get(False)
             command = command.decode()
@@ -122,6 +153,7 @@ class Client(object):
             if cstr == "EXIT":
                 self.socket.close()
                 self.server.unregister_client(self.pid)
+                self.running = False
 
             elif cstr == "CONNECT":
                 if len(command) > 1:
@@ -131,7 +163,10 @@ class Client(object):
                 pid = None
                 if len(command) > 1:
                     pid = int(command[1])
-                self.server.register_client(self, pid)
+                    self.pid = pid
+                self.server.register_client(self.pid)
+                # TODO: Actually check the PID
+                self.accept_registration(pid if pid is not None else self.pid)
             elif cstr == "ACT":
                 act_str = command[1]
                 act = act_str.encode()
@@ -156,4 +191,6 @@ class Client(object):
         size = len(command_bytes)
         size = size.to_bytes(4, 'big')
         self.socket.sendall(size + command_bytes)
+
+
 
