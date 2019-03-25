@@ -28,8 +28,8 @@ def make_model():
 
 
 initial_rnn_state = np.zeros((1, 32))
-policy_1 = spornn.SimplePolicyOptimizerRNN(make_model(), 2, initial_rnn_state, scale_value=0.003, gamma=0.9, lr=0.001)
-policy_2 = spornn.SimplePolicyOptimizerRNN(make_model(), 2, initial_rnn_state, scale_value=0.001, gamma=0.9, lr=0.001)
+policy_1 = spornn.SimplePolicyOptimizerRNN(make_model(), 2, initial_rnn_state, scale_value=0.003, gamma=0.9, lr=0.0005)
+policy_2 = spornn.SimplePolicyOptimizerRNN(make_model(), 2, initial_rnn_state, scale_value=0.001, gamma=0.9, lr=0.0005)
 env = multiplayer_car_env.MPCarEnv(
     allow_red_to_enter_target_zone=False,
     force_fair_game=True,

@@ -37,9 +37,9 @@ def create_value_model():
     return model
 
 
-agent_1 = aac.AdvantageActorCritic(create_policy_model(), create_value_model(), 2, lr=0.001, gamma=0.9, entropy_factor=0.01)
-agent_2 = aac.AdvantageActorCritic(create_policy_model(), create_value_model(), 2, lr=0.001, gamma=0.9, entropy_factor=0.01)
-env = multiplayer_car_env.MPCarEnv(allow_red_to_enter_target_zone=True)
+agent_1 = aac.AdvantageActorCritic(create_policy_model(), create_value_model(), 2, lr=0.0001, gamma=0.99, entropy_factor=0.01)
+agent_2 = aac.AdvantageActorCritic(create_policy_model(), create_value_model(), 2, lr=0.0001, gamma=0.99, entropy_factor=0.01)
+env = multiplayer_car_env.MPCarEnv()
 
 with tf.Session() as sess:
     sess.run(tf.global_variables_initializer())

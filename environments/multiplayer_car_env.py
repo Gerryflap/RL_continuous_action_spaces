@@ -82,7 +82,7 @@ class Car(object):
 
 
 class MPCarEnv(object):
-    def __init__(self, allow_red_to_enter_target_zone=False, force_fair_game=False, speed_limits=(-2, 10), throttle_scale=0.2, steer_scale=5e-1):
+    def __init__(self, allow_red_to_enter_target_zone=False, force_fair_game=False, speed_limits=(-2, 10), throttle_scale=0.2, steer_scale=5e-1, max_steps=1000):
         self.car_1 = None
         self.car_2 = None
         self.target = None
@@ -94,6 +94,7 @@ class MPCarEnv(object):
         self.speed_limits = speed_limits
         self.throttle_scale = throttle_scale
         self.steer_scale = steer_scale
+        self.max_steps = max_steps
 
     def reset(self):
         self.target = random.randint(0, screen_width - 1), random.randint(0, screen_height - 1)
@@ -143,7 +144,7 @@ class MPCarEnv(object):
         r_1 = (prev_dist_1 - dist_1) / scale_factor - 0.001
         r_2 = (prev_dist_2 - dist_2) / scale_factor - 0.001
 
-        if not is_in_bounds(self.car_1.x, self.car_1.y) or self.steps > 1000:
+        if not is_in_bounds(self.car_1.x, self.car_1.y) or self.steps > self.max_steps:
             r_1 -= 1
             self.done = True
 

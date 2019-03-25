@@ -10,7 +10,7 @@ import numpy as np
 
 
 class AdvantageActorCritic(object):
-    def __init__(self, policy_model: tf.keras.Model, value_model: tf.keras.Model, n_actions, lr=0.001, gamma=0.99, entropy_factor=0.1):
+    def __init__(self, policy_model: tf.keras.Model, value_model: tf.keras.Model, n_actions, lr=0.001, gamma=0.99, entropy_factor=0.1, value_loss_scale=0.5):
         """
         Initializes the Simple Policy Optimizer With Entropy
         :param policy_model: A Keras model that takes the state as input and outputs action means and action scales as a
@@ -67,7 +67,7 @@ class AdvantageActorCritic(object):
         self.v_loss = tf.keras.losses.mean_squared_error(self.summed_discounted_rewards, self.predicted_values)
 
         # The total loss function
-        self.loss = -1 * self.p_energy + self.v_loss
+        self.loss = -1 * self.p_energy + value_loss_scale * self.v_loss
 
         # The optimizer and optimization step tensor:
         self.optimizer = tf.train.AdamOptimizer(lr)
