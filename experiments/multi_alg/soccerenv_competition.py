@@ -1,5 +1,5 @@
 """
-    Applies the AAC algorithm to the MPCarEnv.
+    Applies the algorithms to the SoccerEnv.
     Results: The parameters below do result in decent policies, although very different compared to SPO.
         Balance issues may occur
 """
@@ -7,6 +7,7 @@ import random
 import time
 from collections import defaultdict
 
+import matplotlib
 import numpy as np
 import tensorflow as tf
 from algorithms import advantage_actor_critic as aac, random_agent
@@ -16,15 +17,16 @@ from algorithms import simple_policy_optimization_rnn as spornn
 from algorithms import dummy_agent
 from environments import multiplayer_car_env
 import matplotlib.pyplot as plt
+import competition_system.matchmaking_systems as ms
 
 from environments.soccer_env import SoccerEnvironment
 
 ks = tf.keras
 
-SEED = 420
-random.seed(SEED)
-tf.set_random_seed(SEED)
-multiplayer_car_env.set_random_seed(SEED)
+# SEED = 420
+# random.seed(SEED)
+# tf.set_random_seed(SEED)
+# multiplayer_car_env.set_random_seed(SEED)
 
 
 def create_policy_model_entropy():
@@ -85,10 +87,14 @@ agents = [
                                     lr=0.0001),
     spo.SimplePolicyOptimizer(create_policy_model_no_entropy(), 2, 0.0001, gamma=0.997, scale_value=0.6),
     dummy_agent.DummyAgent(2),
-    random_agent.RandomAgent(2)
+    dummy_agent.DummyAgent(2),
+    random_agent.RandomAgent(2),
+    random_agent.RandomAgent(2),
 ]
 
+pids = {agents[i]: i for i in range(len(agents))}
 
+pids_in_queue = set(pids.values())
 
 def name(agent):
     return str(agent.__class__.__name__) + str(id(agent))
@@ -101,14 +107,22 @@ avg_scores = defaultdict(lambda: (0, 0))
 
 scores = defaultdict(lambda: [])
 
+matchmaking = ms.ScaledMatchMakingSystem()
+
 
 try:
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
         episode = 0
+
+        match_queue = matchmaking.get_matches(pids_in_queue)
         while True:
             # Pick random agents
-            agent_1, agent_2 = random.choice(agents), random.choice(agents)
+            if len(match_queue) == 0:
+                match_queue = matchmaking.get_matches(pids_in_queue)
+            agent_1_pid, agent_2_pid = match_queue.pop()
+            agent_1 = agents[agent_1_pid]
+            agent_2 = agents[agent_2_pid]
             # print(str(agent_1.__class__.__name__), "vs. ", str(agent_2.__class__.__name__))
 
             state_1, state_2 = env.reset()
@@ -134,13 +148,22 @@ try:
             agent_1.train(sess, trajectory_1)
             agent_2.train(sess, trajectory_2)
 
+            if score_1 > score_2:
+                outcome = 1
+            elif score_1 < score_2:
+                outcome = 2
+            else:
+                outcome = 0
+
+            matchmaking.report_outcome(agent_1_pid, agent_2_pid, outcome)
+
             sum_scores, total_games = avg_scores[name(agent_1)]
             avg_scores[name(agent_1)] = sum_scores + score_1, total_games + 1
             sum_scores, total_games = avg_scores[name(agent_2)]
             avg_scores[name(agent_2)] = sum_scores + score_2, total_games + 1
 
-            scores[name(agent_1)].append(avg_scores[name(agent_1)][0]/avg_scores[name(agent_1)][1])
-            scores[name(agent_2)].append(avg_scores[name(agent_2)][0]/avg_scores[name(agent_2)][1])
+            scores[name(agent_1)].append(matchmaking.get_rating(agent_1_pid))
+            scores[name(agent_2)].append(matchmaking.get_rating(agent_2_pid))
 
 
             for agent in [agent_1, agent_2]:
@@ -154,16 +177,23 @@ try:
 
                 print("EPISODE ", episode)
                 print("AVG SCORES:")
-                for agnt, (scr, eps) in avg_scores.items():
-                    print("%s: %.3f"%(agnt, scr/eps))
+                for agent, pid in pids.items():
+                    agnt = name(agent)
+                    scr, eps = avg_scores[agnt]
+                    print("%s: %.3f\t\t%.3f"%(agnt, 0 if eps == 0 else scr/eps, matchmaking.get_rating(pid)))
 
             episode += 1
 
 except KeyboardInterrupt:
     pass
 
+plt.figure(dpi=200)
 for agnt, scores in scores.items():
     plt.plot(scores, label=agnt)
+font = {'family' : 'normal',
+        'size'   : 5}
+
+matplotlib.rc('font', **font)
 plt.legend()
 plt.title("Blue scores")
 plt.show()

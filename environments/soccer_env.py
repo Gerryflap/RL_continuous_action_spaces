@@ -25,7 +25,8 @@ class SoccerEnvironment(object):
     resistance_factors = [1.02, 1.02, 1.01]
     acceleration = 0.5
     bounce_resistance = [1.1,1.1,2]
-    max_steps = 1000
+    max_steps_after_bounce = 400
+    max_steps = 5000
     object_masses = [1, 1, 0.3]
 
     def __init__(self, gui=True, add_random=True):
@@ -47,6 +48,7 @@ class SoccerEnvironment(object):
         self.p2_speed = (0, 0)
         self.ball_speed = (0, 0) #(10 * (random.random()*2-1), 10 * (random.random()*2-1))
         self.steps = 0
+        self.steps_since_ball_touch = 0
         return self.__gen_state__()
 
     def step(self, p1_action, p2_action):
@@ -64,13 +66,14 @@ class SoccerEnvironment(object):
         self.p2_pos, self.p2_speed = new_state[1]
         self.ball_pos, self.ball_speed = new_state[2]
         self.steps += 1
+        self.steps_since_ball_touch += 1
 
         return self.__gen_state__(), rewards, done, None
 
     def render(self):
         self.screen.fill((0, 0, 0))
-        pygame.draw.line(self.screen, (0, 255, 0), (0, 100), (0, 200), 10)
-        pygame.draw.line(self.screen, (0, 255, 0), (self.width, 100), (self.width, 200), 10)
+        pygame.draw.line(self.screen, (0, 255, 0), (0, 0), (0, 300), 10)
+        pygame.draw.line(self.screen, (0, 255, 0), (self.width, 0), (self.width, 300), 10)
         x, y = self.p1_pos
         x, y = int(x), int(y)
         pygame.draw.circle(self.screen, (255, 0, 0), (x, y), self.circle_radius)
@@ -126,10 +129,10 @@ class SoccerEnvironment(object):
             pos, speed = o
             x, y = pos
             xs, ys = speed
-            if x > self.width - self.circle_radius and not (100 < y < 200):
+            if x > self.width - self.circle_radius and not (10 < y < 300):
                 x = self.width - self.circle_radius
                 xs = -xs/self.bounce_resistance[i]
-            if x < self.circle_radius and not (100 < y < 200):
+            if x < self.circle_radius and not (0 < y < 300):
                 x = self.circle_radius
                 xs = -xs/self.bounce_resistance[i]
             if x > self.width + self.circle_radius:
@@ -207,9 +210,9 @@ class SoccerEnvironment(object):
         if x < 0:
             self.reset()
             return (-1.0, 1.0), True
-        if self.steps > self.max_steps:
+        if self.steps > self.max_steps or self.steps_since_ball_touch > self.max_steps_after_bounce:
             self.reset()
-            return (-1.0, -1.0), True
+            return (0.0, 0.0), True
         r1 = 0
         r2 = 0
         if self.get_total_speed(self.p1_speed) < 0.1:
@@ -219,8 +222,10 @@ class SoccerEnvironment(object):
 
         if (0, 2) in collisions:
             r1 += 0
+            self.steps_since_ball_touch = 0
         if (1, 2) in collisions:
             r2 += 0
+            self.steps_since_ball_touch = 0
 
         return (r1, r2), False
 

@@ -5,6 +5,8 @@ import random
 from abc import ABC, abstractmethod
 from collections import defaultdict
 
+import numpy as np
+
 
 class MatchmakingSystem(ABC):
     @abstractmethod
@@ -53,6 +55,87 @@ class RandomMatchMakingSystem(MatchmakingSystem):
         elif outcome == 2:
             self.ratings[pid2] += 1
             self.ratings[pid1] -= 1
+
+    def get_rating(self, pid: int) -> float:
+        return self.ratings[pid]
+
+
+class WLMatchMakingSystem(MatchmakingSystem):
+    """
+        Win - Loss Matchmaking. Tries to find close matches in win - loss number
+    """
+    ratings = defaultdict(lambda: 0)
+
+    def get_matches(self, active_pids, max_matches=None) -> list:
+        if len(active_pids) == 0:
+            return []
+        active_pids = list([(pid, self.get_rating(pid)) for pid in active_pids])
+        random.shuffle(active_pids)
+
+        if max_matches is not None:
+            n_matches = min(len(active_pids)//2, max_matches)
+        else:
+            n_matches = len(active_pids) // 2
+
+        active_pids = active_pids[:2*n_matches]
+        active_pids = sorted(active_pids, key=lambda e: e[1])
+        matches = []
+        for (pid1, score1), (pid2, score2) in zip(active_pids[0::2], active_pids[1::2]):
+            matches.append((pid1, pid2))
+
+        return matches
+
+    def report_outcome(self, pid1: int, pid2: int, outcome: int):
+        if outcome == 1:
+            self.ratings[pid1] += 1
+            self.ratings[pid2] -= 1
+        elif outcome == 2:
+            self.ratings[pid2] += 1
+            self.ratings[pid1] -= 1
+
+    def get_rating(self, pid: int) -> float:
+        return self.ratings[pid]
+
+
+class ScaledMatchMakingSystem(MatchmakingSystem):
+    """
+        Scales rating gain/loss with rating difference
+    """
+    ratings = defaultdict(lambda: 0)
+
+    def get_matches(self, active_pids, max_matches=None) -> list:
+        if len(active_pids) == 0:
+            return []
+        active_pids = list([(pid, self.get_rating(pid) + np.random.normal(0, 0.5)) for pid in active_pids])
+        random.shuffle(active_pids)
+
+        if max_matches is not None:
+            n_matches = min(len(active_pids)//2, max_matches)
+        else:
+            n_matches = len(active_pids) // 2
+
+        active_pids = active_pids[:2*n_matches]
+        active_pids = sorted(active_pids, key=lambda e: e[1])
+        matches = []
+        for (pid1, score1), (pid2, score2) in zip(active_pids[0::2], active_pids[1::2]):
+            matches.append((pid1, pid2))
+
+        return matches
+
+    def report_outcome(self, pid1: int, pid2: int, outcome: int):
+        diff = self.get_rating(pid1) - self.get_rating(pid2)
+        diff = max(min(diff, 200), -200)
+        if outcome == 1:
+            incr = min(1.03**-diff, 100)
+            self.ratings[pid1] += 0.3*incr
+            self.ratings[pid2] -= 0.3*incr
+        elif outcome == 2:
+            incr = min(1.03 ** diff, 100)
+            self.ratings[pid2] += 0.3*incr
+            self.ratings[pid1] -= 0.3*incr
+        else:
+            self.ratings[pid1] -= 0.1 * diff/2
+            self.ratings[pid2] += 0.1 * diff/2
 
     def get_rating(self, pid: int) -> float:
         return self.ratings[pid]

@@ -86,7 +86,7 @@ class CompetitionServer(object):
             # for client in clients:
             #     client.process_commands()
 
-            if len(self.queue) >= 2 and len(self.queue) >= 0.2*len(self.clients):
+            if len(self.queue) >= 2 and len(self.queue) >= 0.5*len(self.clients):
                 matches = self.matchmaking.get_matches(self.queue)
 
                 for match in matches:
