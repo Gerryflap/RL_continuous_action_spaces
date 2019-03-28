@@ -22,9 +22,10 @@ class SoccerEnvironment(object):
     width = 600
     height = 300
     circle_radius = 25
-    resistance_factors = [1.02, 1.02, 1.01]
+    # resistance_factors = [1.02, 1.02, 1.01]
+    resistance_factors = [1.01, 1.01, 1.02]
     acceleration = 0.5
-    bounce_resistance = [1.1,1.1,2]
+    bounce_resistance = [1.3, 1.3, 2]
     max_steps_after_bounce = 400
     max_steps = 5000
     object_masses = [1, 1, 0.3]
@@ -40,8 +41,8 @@ class SoccerEnvironment(object):
 
 
     def reset(self):
-        self.p1_pos = (0.4 * self.width, 0.5 * self.height)
-        self.p2_pos = (0.6 * self.width, 0.5 * self.height)
+        self.p1_pos = (0.1 * self.width, 0.5 * self.height)
+        self.p2_pos = (0.9 * self.width, 0.5 * self.height)
         self.ball_pos = (0.5 * self.width, 0.5 * self.height)
 
         self.p1_speed = (0, 0)
@@ -99,7 +100,7 @@ class SoccerEnvironment(object):
         p1_state = np.array([
             (self.p1_pos[0] - hw) / hw, (self.p1_pos[1] - hh) / hh,
             (self.p2_pos[0] - self.p1_pos[0]) / hw, (self.p2_pos[1] - self.p1_pos[1])/ hh,
-            (self.ball_pos[0] - self.p1_pos[0]) / hw, (self.ball_pos[1] - self.p1_pos[0]) / hh,
+            (self.ball_pos[0] - self.p1_pos[0]) / hw, (self.ball_pos[1] - self.p1_pos[1]) / hh,
             self.p1_speed[0], self.p1_speed[1],
             self.p2_speed[0], self.p2_speed[1],
             self.ball_speed[0], self.ball_speed[1],
@@ -107,9 +108,9 @@ class SoccerEnvironment(object):
         p2_state = np.array([
             -(self.p2_pos[0] - hw) / hw, (self.p2_pos[1] - hh) / hh,
             -(self.p1_pos[0] - self.p2_pos[0]) / hw, (self.p1_pos[1] - self.p2_pos[1])/ hh,
-            -(self.ball_pos[0] - self.p2_pos[0]) / hw, -(self.ball_pos[1] - self.p2_pos[0]) / hh,
-            -self.p1_speed[0], self.p1_speed[1],
+            -(self.ball_pos[0] - self.p2_pos[0]) / hw, (self.ball_pos[1] - self.p2_pos[1]) / hh,
             -self.p2_speed[0], self.p2_speed[1],
+            -self.p1_speed[0], self.p1_speed[1],
             -self.ball_speed[0], self.ball_speed[1],
         ])
         if self.add_random:
@@ -129,7 +130,7 @@ class SoccerEnvironment(object):
             pos, speed = o
             x, y = pos
             xs, ys = speed
-            if x > self.width - self.circle_radius and not (10 < y < 300):
+            if x > self.width - self.circle_radius and not (0 < y < 300):
                 x = self.width - self.circle_radius
                 xs = -xs/self.bounce_resistance[i]
             if x < self.circle_radius and not (0 < y < 300):
@@ -212,7 +213,7 @@ class SoccerEnvironment(object):
             return (-1.0, 1.0), True
         if self.steps > self.max_steps or self.steps_since_ball_touch > self.max_steps_after_bounce:
             self.reset()
-            return (0.0, 0.0), True
+            return (-1.0, -1.0), True
         r1 = 0
         r2 = 0
         if self.get_total_speed(self.p1_speed) < 0.1:

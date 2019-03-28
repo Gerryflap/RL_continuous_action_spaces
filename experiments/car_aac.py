@@ -19,8 +19,8 @@ car_env.set_random_seed(SEED)
 def create_policy_model():
     inp = ks.Input((6,))
     x = inp
-    x = ks.layers.Dense(24, activation='tanh')(x)
-    x = ks.layers.Dense(12, activation='tanh')(x)
+    x = ks.layers.Dense(128, activation='tanh')(x)
+    x = ks.layers.Dense(64, activation='tanh')(x)
     means = ks.layers.Dense(2, activation='tanh')(x)
     scales = ks.layers.Dense(2, activation='sigmoid')(x)
     model = ks.Model(inputs=inp, outputs=[means, scales])
@@ -30,14 +30,14 @@ def create_policy_model():
 def create_value_model():
     inp = ks.Input((6,))
     x = inp
-    x = ks.layers.Dense(24, activation='tanh')(x)
-    x = ks.layers.Dense(12, activation='tanh')(x)
+    x = ks.layers.Dense(128, activation='tanh')(x)
+    x = ks.layers.Dense(64, activation='tanh')(x)
     value = ks.layers.Dense(1, activation='linear')(x)
     model = ks.Model(inputs=inp, outputs=value)
     return model
 
 
-policy = aac.AdvantageActorCritic(create_policy_model(), create_value_model(), 2, entropy_factor=0.01, gamma=0.9, lr=0.003)
+policy = aac.AdvantageActorCritic(create_policy_model(), create_value_model(), 2, entropy_factor=0.1, gamma=0.9, lr=0.0001)
 env = car_env.CarEnv(True)
 
 with tf.Session() as sess:

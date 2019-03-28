@@ -55,16 +55,16 @@ class AdvantageActorCritic(object):
         self.action_log_probs = tf.reduce_sum(self.policy_dist.log_prob(self.actions_taken), axis=1)
 
         # Define the entropy terms
-        self.entropy = self.policy_dist.entropy()
+        self.entropy = tf.log(self.action_scales * (np.pi * np.e * 2)**0.5)# self.policy_dist.entropy()
         self.mean_entropy = tf.reduce_mean(self.entropy)
         self.summed_entropy = tf.reduce_sum(self.entropy)
 
         # The energy to be maximized for the policy
-        self.p_score_energy = tf.reduce_sum(self.action_log_probs * self.advantages)
-        self.p_energy = self.p_score_energy + entropy_factor * self.summed_entropy
+        self.p_score_energy = tf.reduce_mean(self.action_log_probs * self.advantages)
+        self.p_energy = self.p_score_energy + entropy_factor * self.mean_entropy
 
         # The loss function for the value network
-        self.v_loss = tf.keras.losses.mean_squared_error(self.summed_discounted_rewards, self.predicted_values)
+        self.v_loss = tf.reduce_mean(tf.keras.losses.mean_squared_error(self.summed_discounted_rewards, self.predicted_values))
 
         # The total loss function
         self.loss = -1 * self.p_energy + value_loss_scale * self.v_loss
@@ -130,5 +130,5 @@ class AdvantageActorCritic(object):
         state = np.expand_dims(state, axis=0)
 
         # Sample the action values based on our current state
-        actions = sess.run((self.sampled_actions,), feed_dict={self.states_p: state})[0][0]
+        actions = sess.run((self.sampled_actions, self.entropy), feed_dict={self.states_p: state})[0][0]
         return actions

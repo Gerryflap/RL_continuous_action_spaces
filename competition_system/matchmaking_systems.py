@@ -106,7 +106,7 @@ class ScaledMatchMakingSystem(MatchmakingSystem):
     def get_matches(self, active_pids, max_matches=None) -> list:
         if len(active_pids) == 0:
             return []
-        active_pids = list([(pid, self.get_rating(pid) + np.random.normal(0, 0.5)) for pid in active_pids])
+        active_pids = list([(pid, self.get_rating(pid) + np.random.normal(0, 1.5)) for pid in active_pids])
         random.shuffle(active_pids)
 
         if max_matches is not None:
@@ -116,6 +116,10 @@ class ScaledMatchMakingSystem(MatchmakingSystem):
 
         active_pids = active_pids[:2*n_matches]
         active_pids = sorted(active_pids, key=lambda e: e[1])
+        for _ in range(n_matches):
+            # Get a random index between 0 and the max index - 1
+            i = random.randint(0, n_matches*2 - 2)
+            active_pids[i], active_pids[i+1] = active_pids[i+1], active_pids[i]
         matches = []
         for (pid1, score1), (pid2, score2) in zip(active_pids[0::2], active_pids[1::2]):
             matches.append((pid1, pid2))
@@ -126,16 +130,16 @@ class ScaledMatchMakingSystem(MatchmakingSystem):
         diff = self.get_rating(pid1) - self.get_rating(pid2)
         diff = max(min(diff, 200), -200)
         if outcome == 1:
-            incr = min(1.03**-diff, 100)
-            self.ratings[pid1] += 0.3*incr
-            self.ratings[pid2] -= 0.3*incr
+            incr = min(1.05 ** -diff, 100)
+            self.ratings[pid1] += 0.5*incr
+            self.ratings[pid2] -= 0.5*incr
         elif outcome == 2:
-            incr = min(1.03 ** diff, 100)
-            self.ratings[pid2] += 0.3*incr
-            self.ratings[pid1] -= 0.3*incr
+            incr = min(1.05 ** diff, 100)
+            self.ratings[pid2] += 0.5*incr
+            self.ratings[pid1] -= 0.5*incr
         else:
-            self.ratings[pid1] -= 0.1 * diff/2
-            self.ratings[pid2] += 0.1 * diff/2
+            self.ratings[pid1] -= 0.05 * diff/2
+            self.ratings[pid2] += 0.05 * diff/2
 
     def get_rating(self, pid: int) -> float:
         return self.ratings[pid]

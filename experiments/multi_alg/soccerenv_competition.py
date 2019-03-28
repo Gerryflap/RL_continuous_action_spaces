@@ -32,8 +32,8 @@ ks = tf.keras
 def create_policy_model_entropy():
     inp = ks.Input((12,))
     x = inp
-    x = ks.layers.Dense(64, activation='tanh')(x)
-    x = ks.layers.Dense(32, activation='tanh')(x)
+    x = ks.layers.Dense(64, activation='selu')(x)
+    x = ks.layers.Dense(32, activation='selu')(x)
     means = ks.layers.Dense(2, activation='tanh')(x)
     scales = ks.layers.Dense(2, activation='sigmoid')(x)
     model = ks.Model(inputs=inp, outputs=[means, scales])
@@ -43,8 +43,10 @@ def create_policy_model_entropy():
 def create_policy_model_no_entropy():
     inp = ks.Input((12,))
     x = inp
-    x = ks.layers.Dense(64, activation='tanh')(x)
-    x = ks.layers.Dense(32, activation='tanh')(x)
+    x = ks.layers.Dense(16, activation='selu')(x)
+    x = ks.layers.Dense(16, activation='selu')(x)
+    x = ks.layers.Dense(8, activation='selu')(x)
+    x = ks.layers.Dense(8, activation='selu')(x)
     means = ks.layers.Dense(2, activation='tanh')(x)
     model = ks.Model(inputs=inp, outputs=means)
     return model
@@ -53,8 +55,10 @@ def create_policy_model_no_entropy():
 def create_value_model():
     inp = ks.Input((12,))
     x = inp
-    x = ks.layers.Dense(64, activation='tanh')(x)
-    x = ks.layers.Dense(32, activation='tanh')(x)
+    x = ks.layers.Dense(16, activation='selu')(x)
+    x = ks.layers.Dense(16, activation='selu')(x)
+    x = ks.layers.Dense(8, activation='selu')(x)
+    x = ks.layers.Dense(8, activation='selu')(x)
     value = ks.layers.Dense(1, activation='linear')(x)
     model = ks.Model(inputs=inp, outputs=value)
     return model
@@ -65,7 +69,9 @@ def make_rnn_model():
     state_inp = ks.Input((32,))
 
     mem_out, new_rnn_state = ks.layers.GRU(32, return_sequences=True, return_state=True)([inp, state_inp])
-    mem_out = ks.layers.TimeDistributed(ks.layers.Dense(32, activation='tanh'))(mem_out)
+    mem_out = ks.layers.TimeDistributed(ks.layers.Dense(32, activation='selu'))(mem_out)
+    mem_out = ks.layers.TimeDistributed(ks.layers.Dense(16, activation='selu'))(mem_out)
+    mem_out = ks.layers.TimeDistributed(ks.layers.Dense(8, activation='selu'))(mem_out)
     action_means = ks.layers.TimeDistributed(ks.layers.Dense(2, activation='tanh'))(mem_out)
     model = ks.models.Model(inputs=[inp, state_inp], outputs=[action_means, new_rnn_state])
     return model
@@ -73,22 +79,17 @@ def make_rnn_model():
 
 initial_rnn_state = np.zeros((1, 32))
 agents = [
-    aac.AdvantageActorCritic(create_policy_model_entropy(), create_value_model(), 2, lr=0.001, gamma=0.997,
-                             entropy_factor=1.0),
     aac.AdvantageActorCritic(create_policy_model_entropy(), create_value_model(), 2, lr=0.0001, gamma=0.997,
-                             entropy_factor=1.0),
-    aac.AdvantageActorCritic(create_policy_model_entropy(), create_value_model(), 2, lr=0.00001, gamma=0.997,
-                             entropy_factor=1.0),
-    spowe.SimplePolicyOptimizerWithEntropy(create_policy_model_entropy(), 2, 0.0001, gamma=0.997,
-                                           entropy_factor=1.0),
-    spornn.SimplePolicyOptimizerRNN(make_rnn_model(), 2, initial_rnn_state, scale_value=0.6, gamma=0.997,
-                                    lr=0.0001),
-    spornn.SimplePolicyOptimizerRNN(make_rnn_model(), 2, initial_rnn_state, scale_value=1.2, gamma=0.997,
-                                    lr=0.0001),
-    spo.SimplePolicyOptimizer(create_policy_model_no_entropy(), 2, 0.0001, gamma=0.997, scale_value=0.6),
-    dummy_agent.DummyAgent(2),
-    dummy_agent.DummyAgent(2),
-    random_agent.RandomAgent(2),
+                             entropy_factor=0.1),
+    # aac.AdvantageActorCritic(create_policy_model_entropy(), create_value_model(), 2, lr=0.0001, gamma=0.997,
+    #                          entropy_factor=3.0),
+    # spornn.SimplePolicyOptimizerRNN(make_rnn_model(), 2, initial_rnn_state, scale_value=0.6, gamma=0.997,
+    #                                 lr=0.0001),
+    # spornn.SimplePolicyOptimizerRNN(make_rnn_model(), 2, initial_rnn_state, scale_value=0.6, gamma=0.997,
+    #                                 lr=0.0001),
+    # spo.SimplePolicyOptimizer(create_policy_model_no_entropy(), 2, 0.0001, gamma=0.997, scale_value=0.6),
+    # spo.SimplePolicyOptimizer(create_policy_model_no_entropy(), 2, 0.0001, gamma=0.997, scale_value=0.6),
+    # dummy_agent.DummyAgent(2),
     random_agent.RandomAgent(2),
 ]
 
@@ -106,6 +107,7 @@ env = SoccerEnvironment(add_random=False)
 avg_scores = defaultdict(lambda: (0, 0))
 
 scores = defaultdict(lambda: [])
+episodes = defaultdict(lambda: [])
 
 matchmaking = ms.ScaledMatchMakingSystem()
 
@@ -164,6 +166,8 @@ try:
 
             scores[name(agent_1)].append(matchmaking.get_rating(agent_1_pid))
             scores[name(agent_2)].append(matchmaking.get_rating(agent_2_pid))
+            episodes[name(agent_1)].append(episode)
+            episodes[name(agent_2)].append(episode)
 
 
             for agent in [agent_1, agent_2]:
@@ -189,7 +193,7 @@ except KeyboardInterrupt:
 
 plt.figure(dpi=200)
 for agnt, scores in scores.items():
-    plt.plot(scores, label=agnt)
+    plt.plot(episodes[agnt], scores, label=agnt)
 font = {'family' : 'normal',
         'size'   : 5}
 
