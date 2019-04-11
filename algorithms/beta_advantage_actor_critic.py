@@ -10,7 +10,7 @@ import numpy as np
 
 
 class BetaAdvantageActorCritic(object):
-    def __init__(self, policy_model: tf.keras.Model, value_model: tf.keras.Model, n_actions, lr=0.001, gamma=0.99, entropy_factor=0.1, value_loss_scale=0.5, log=False, lambd=1.0):
+    def __init__(self, policy_model: tf.keras.Model, value_model: tf.keras.Model, n_actions, lr=0.001, gamma=0.99, entropy_factor=0.1, value_loss_scale=0.5, log=False, lambd=1.0, ppo_eps=None):
         """
         Initializes the Simple Policy Optimizer With Entropy
         :param policy_model: A Keras model that takes the state as input and outputs action means and action scales as a
@@ -78,7 +78,13 @@ class BetaAdvantageActorCritic(object):
 
 
         # The energy to be maximized for the policy
-        self.p_score_energy = tf.reduce_mean(self.action_log_probs * self.advantages)
+        if ppo_eps is None:
+            self.p_score_energy = tf.reduce_mean(self.action_log_probs * self.advantages)
+        else:
+            ratio = self.action_log_probs - tf.stop_gradient(self.action_log_probs)
+            ratio = tf.exp(ratio)   # Undo the logprob here in order to do the same as normal ppo
+            ratio_with_clip = tf.minimum(ratio, tf.clip_by_value(ratio, 1-ppo_eps, 1+ppo_eps))
+            self.p_score_energy = tf.reduce_mean(ratio_with_clip * self.advantages)
         self.p_energy = self.p_score_energy + entropy_factor * self.mean_entropy
 
         # The loss function for the value network

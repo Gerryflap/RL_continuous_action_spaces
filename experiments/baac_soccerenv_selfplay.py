@@ -38,8 +38,8 @@ value = ks.layers.Dense(1, activation='linear')(x2)
 v_model = ks.Model(inputs=inp, outputs=value)
 
 
-agent = baac.BetaAdvantageActorCritic(p_model, v_model, 2, lr=0.001, gamma=0.97,
-                                      entropy_factor=0.0005, log=True, value_loss_scale=0.1, lambd=0.97)
+agent = baac.BetaAdvantageActorCritic(p_model, v_model, 2, lr=0.0001, gamma=0.99,
+                                      entropy_factor=0.00001, log=True, value_loss_scale=0.1, lambd=0.97, ppo_eps=0.2)
 
 
 env = SoccerEnvironment(add_random=False)
@@ -52,7 +52,7 @@ try:
         while True:
 
             agent_1 = agent
-            agent_2 = agent
+            agent_2 = dummy_agent.DummyAgent(2)
 
             state_1, state_2 = env.reset()
             done = False
