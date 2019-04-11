@@ -10,16 +10,15 @@ from collections import defaultdict
 import matplotlib
 import numpy as np
 import tensorflow as tf
-from algorithms import advantage_actor_critic as aac, random_agent, soccer_agent, linear_agent_switch_wrapper, beta_advantage_actor_critic as baac
+from algorithms import advantage_actor_critic as aac, random_agent
 from algorithms import simple_policy_optimization as spo
 from algorithms import simple_policy_optimization_with_entropy as spowe
 from algorithms import simple_policy_optimization_rnn as spornn
 from algorithms import dummy_agent
-from environments import multiplayer_car_env
 import matplotlib.pyplot as plt
 import competition_system.matchmaking_systems as ms
+from environments.simple_comp_env import SimpleCompEnv
 
-from environments.soccer_env import SoccerEnvironment
 
 ks = tf.keras
 
@@ -30,81 +29,73 @@ ks = tf.keras
 
 
 def create_policy_model_entropy():
-    inp = ks.Input((14,))
+    inp = ks.Input((2,))
     x = inp
     x = ks.layers.Dense(64, activation='selu')(x)
     x = ks.layers.Dense(32, activation='selu')(x)
-    means = ks.layers.Dense(2, activation='tanh')(x)
-    scales = ks.layers.Dense(2, activation='sigmoid')(x)
+    means = ks.layers.Dense(1, activation='tanh')(x)
+    scales = ks.layers.Dense(1, activation='sigmoid')(x)
     model = ks.Model(inputs=inp, outputs=[means, scales])
     return model
 
-def create_policy_model_beta():
-    inp = ks.Input((14,))
-    x = inp
-    x = ks.layers.Dense(64, activation='selu')(x)
-    x = ks.layers.Dense(32, activation='selu')(x)
-    alphas = ks.layers.Dense(2, activation='softplus')(x)
-    betas = ks.layers.Dense(2, activation='softplus')(x)
-    model = ks.Model(inputs=inp, outputs=[alphas, betas])
-    return model
 
 def create_policy_model_no_entropy():
-    inp = ks.Input((14,))
+    inp = ks.Input((2,))
     x = inp
     x = ks.layers.Dense(16, activation='selu')(x)
     x = ks.layers.Dense(16, activation='selu')(x)
     x = ks.layers.Dense(8, activation='selu')(x)
     x = ks.layers.Dense(8, activation='selu')(x)
-    means = ks.layers.Dense(2, activation='tanh')(x)
+    means = ks.layers.Dense(1, activation='tanh')(x)
     model = ks.Model(inputs=inp, outputs=means)
     return model
 
 
 def create_value_model():
-    inp = ks.Input((14,))
+    inp = ks.Input((2,))
     x = inp
-    x = ks.layers.Dense(64, activation='selu')(x)
-    x = ks.layers.Dense(32, activation='selu')(x)
+    x = ks.layers.Dense(16, activation='selu')(x)
+    x = ks.layers.Dense(16, activation='selu')(x)
+    x = ks.layers.Dense(8, activation='selu')(x)
+    x = ks.layers.Dense(8, activation='selu')(x)
     value = ks.layers.Dense(1, activation='linear')(x)
     model = ks.Model(inputs=inp, outputs=value)
     return model
 
 
 def make_rnn_model():
-    inp = ks.Input((None, 14))
+    inp = ks.Input((None, 2))
     state_inp = ks.Input((32,))
 
     mem_out, new_rnn_state = ks.layers.GRU(32, return_sequences=True, return_state=True)([inp, state_inp])
     mem_out = ks.layers.TimeDistributed(ks.layers.Dense(32, activation='selu'))(mem_out)
     mem_out = ks.layers.TimeDistributed(ks.layers.Dense(16, activation='selu'))(mem_out)
     mem_out = ks.layers.TimeDistributed(ks.layers.Dense(8, activation='selu'))(mem_out)
-    action_means = ks.layers.TimeDistributed(ks.layers.Dense(2, activation='tanh'))(mem_out)
+    action_means = ks.layers.TimeDistributed(ks.layers.Dense(1, activation='tanh'))(mem_out)
     model = ks.models.Model(inputs=[inp, state_inp], outputs=[action_means, new_rnn_state])
     return model
 
 
-# lin_agent_1 = linear_agent_switch_wrapper.LinearAgentSwitchWrapper(
-#     aac.AdvantageActorCritic(create_policy_model_entropy(), create_value_model(), 2, lr=0.0001, gamma=0.97,
-#                              entropy_factor=0.001, value_loss_scale=0.03, scale_multiplier=2.0, lambd=0.95),
-#     soccer_agent.SoccerAgent(2),
-#     5000
-# )
-
-
 initial_rnn_state = np.zeros((1, 32))
 agents = [
-    baac.BetaAdvantageActorCritic(create_policy_model_beta(), create_value_model(), 2, lr=0.0003, gamma=0.997,
-                             entropy_factor=0.007, log=True, value_loss_scale=0.05,  lambd=0.95),
-    aac.AdvantageActorCritic(create_policy_model_entropy(), create_value_model(), 2, lr=0.0001, gamma=0.997,
-                             entropy_factor=0.0001, value_loss_scale=0.03, scale_multiplier=5.0, lambd=0.95),
-    spornn.SimplePolicyOptimizerRNN(make_rnn_model(), 2, initial_rnn_state, scale_value=3.0, gamma=0.997,
-                                    lr=0.0001),
-    spo.SimplePolicyOptimizer(create_policy_model_no_entropy(), 2, 0.0001, gamma=0.997, scale_value=0.6),
-    dummy_agent.DummyAgent(2),
-    random_agent.RandomAgent(2),
-    # soccer_agent.SoccerAgent(2),
-    # lin_agent_1
+    aac.AdvantageActorCritic(create_policy_model_entropy(), create_value_model(), 1, lr=0.001, gamma=0.997,
+                             entropy_factor=0.1, value_loss_scale=0.03, log=True, lambd=0.95, scale_multiplier=1.0),
+    aac.AdvantageActorCritic(create_policy_model_entropy(), create_value_model(), 1, lr=0.001, gamma=0.997,
+                             entropy_factor=0.1, value_loss_scale=0.03, lambd=0.95, scale_multiplier=1.0),
+    # aac.AdvantageActorCritic(create_policy_model_entropy(), create_value_model(), 1, lr=0.0001, gamma=0.997,
+    #                          entropy_factor=1.0),
+    # aac.AdvantageActorCritic(create_policy_model_entropy(), create_value_model(), 1, lr=0.0001, gamma=0.997,
+    #                          entropy_factor=1.0),
+    # aac.AdvantageActorCritic(create_policy_model_entropy(), create_value_model(), 1, lr=0.0001, gamma=0.997,
+    #                          entropy_factor=0.1),
+    # spornn.SimplePolicyOptimizerRNN(make_rnn_model(), 1, initial_rnn_state, scale_value=0.6, gamma=0.997,
+    #                                 lr=0.0001),
+    # spornn.SimplePolicyOptimizerRNN(make_rnn_model(), 1, initial_rnn_state, scale_value=0.6, gamma=0.997,
+    #                                 lr=0.0001),
+    # spo.SimplePolicyOptimizer(create_policy_model_no_entropy(), 1, 0.0001, gamma=0.997, scale_value=0.6),
+    # spo.SimplePolicyOptimizer(create_policy_model_no_entropy(), 1, 0.0001, gamma=0.997, scale_value=0.6),
+    #dummy_agent.DummyAgent(2),
+    # random_agent.RandomAgent(2),
 ]
 
 pids = {agents[i]: i for i in range(len(agents))}
@@ -116,7 +107,7 @@ def name(agent):
 
 
 #env = multiplayer_car_env.MPCarEnv(force_fair_game=False, max_steps=500)
-env = SoccerEnvironment(add_random=False)
+env = SimpleCompEnv()
 
 avg_scores = defaultdict(lambda: (0, 0))
 

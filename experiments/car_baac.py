@@ -1,12 +1,12 @@
 """
-    The Car -> Target game for AAC.
+    The Car -> Target game for BAAC.
     Results: With these parameters the environment is almost completely solved before the first rendered run
 """
 
 import time
 
 import tensorflow as tf
-from algorithms import advantage_actor_critic as aac
+from algorithms import beta_advantage_actor_critic as baac
 from environments import car_env
 
 ks = tf.keras
@@ -16,28 +16,28 @@ tf.set_random_seed(SEED)
 car_env.set_random_seed(SEED)
 
 
-def create_policy_model():
+def create_policy_model_beta():
     inp = ks.Input((6,))
     x = inp
-    x = ks.layers.Dense(128, activation='tanh')(x)
-    x = ks.layers.Dense(64, activation='tanh')(x)
-    means = ks.layers.Dense(2, activation='tanh')(x)
-    scales = ks.layers.Dense(2, activation='sigmoid')(x)
-    model = ks.Model(inputs=inp, outputs=[means, scales])
+    x = ks.layers.Dense(24, activation='selu')(x)
+    x = ks.layers.Dense(12, activation='selu')(x)
+    alphas = ks.layers.Dense(2, activation='softplus')(x)
+    betas = ks.layers.Dense(2, activation='softplus')(x)
+    model = ks.Model(inputs=inp, outputs=[alphas, betas])
     return model
 
 
 def create_value_model():
     inp = ks.Input((6,))
     x = inp
-    x = ks.layers.Dense(128, activation='tanh')(x)
-    x = ks.layers.Dense(64, activation='tanh')(x)
+    x = ks.layers.Dense(24, activation='selu')(x)
+    x = ks.layers.Dense(12, activation='selu')(x)
     value = ks.layers.Dense(1, activation='linear')(x)
     model = ks.Model(inputs=inp, outputs=value)
     return model
 
 
-policy = aac.AdvantageActorCritic(create_policy_model(), create_value_model(), 2, entropy_factor=0.3, gamma=0.9, lr=0.0001, lambd=0.9)
+policy = baac.BetaAdvantageActorCritic(create_policy_model_beta(), create_value_model(), 2, entropy_factor=0.03, gamma=0.997, lr=0.0001, lambd=0.95, value_loss_scale=0.3)
 env = car_env.CarEnv(True)
 
 with tf.Session() as sess:

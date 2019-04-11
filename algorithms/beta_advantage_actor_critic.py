@@ -9,8 +9,8 @@ import tensorflow as tf
 import numpy as np
 
 
-class AdvantageActorCritic(object):
-    def __init__(self, policy_model: tf.keras.Model, value_model: tf.keras.Model, n_actions, lr=0.001, gamma=0.99, entropy_factor=0.1, value_loss_scale=0.5, log=False, scale_multiplier=1, lambd=1.0, zero_mean_regularization_factor=0.0):
+class BetaAdvantageActorCritic(object):
+    def __init__(self, policy_model: tf.keras.Model, value_model: tf.keras.Model, n_actions, lr=0.001, gamma=0.99, entropy_factor=0.1, value_loss_scale=0.5, log=False, lambd=1.0):
         """
         Initializes the Simple Policy Optimizer With Entropy
         :param policy_model: A Keras model that takes the state as input and outputs action means and action scales as a
@@ -32,8 +32,8 @@ class AdvantageActorCritic(object):
 
         # The mean and scale action values outputted by the model
         assert isinstance(policy_model.output, list) and len(policy_model.output) == 2
-        self.action_means = policy_model.output[0]
-        self.action_scales = policy_model.output[1] * scale_multiplier
+        self.action_alphas = policy_model.output[0] + 1
+        self.action_betas = policy_model.output[1] + 1
 
         # Predicted values
         self.predicted_values = value_model.output
@@ -47,19 +47,20 @@ class AdvantageActorCritic(object):
 
         # A placeholder to model the actual taken actions. These are used in the loss function
         self.actions_taken = tf.placeholder(shape=(None, n_actions), dtype=tf.float32)
+        self.actions_taken_from_dist = (self.actions_taken + 1)/2
 
         # The policy distribution
-        self.policy_dist = tf.distributions.Normal(self.action_means, self.action_scales)
+        self.policy_dist = tf.distributions.Beta(self.action_alphas, self.action_betas)
 
         # A tensor for sampling actions for given states
-        self.sampled_actions = self.policy_dist.sample()
+        self.sampled_actions = self.policy_dist.sample() * 2 - 1
 
         # The total log probability that a given action was sampled for the given states
-        self.action_log_probs = tf.reduce_sum(self.policy_dist.log_prob(self.actions_taken), axis=1)
+        self.action_log_probs = tf.reduce_sum(self.policy_dist.log_prob(self.actions_taken_from_dist), axis=1)
 
         # Define the entropy terms
-        # self.entropy = self.policy_dist.entropy()
-        self.entropy = tf.log(self.action_scales * (np.pi * np.e * 2)**0.5)# self.policy_dist.entropy()
+        self.entropy = self.policy_dist.entropy()
+        # self.entropy = tf.log(self.action_scales * (np.pi * np.e * 2)**0.5)# self.policy_dist.entropy()
         self.mean_entropy = tf.reduce_mean(self.entropy)
         self.summed_entropy = tf.reduce_sum(self.entropy)
 
@@ -68,7 +69,10 @@ class AdvantageActorCritic(object):
         tf.summary.scalar("entropy", self.mean_entropy)
         tf.summary.scalar("value", self.mean_value)
         tf.summary.histogram("actions", self.actions_taken)
-        tf.summary.histogram("action_means", self.action_means)
+        tf.summary.scalar("alphas", tf.reduce_mean(self.action_alphas))
+        tf.summary.scalar("betas", tf.reduce_mean(self.action_alphas))
+
+
 
 
 
@@ -80,10 +84,9 @@ class AdvantageActorCritic(object):
         # The loss function for the value network
         self.v_loss = tf.reduce_mean(tf.keras.losses.mean_squared_error(self.summed_discounted_rewards, self.predicted_values))
 
-        self.action_mean_divergence = tf.reduce_mean(tf.square(self.action_means))
 
         # The total loss function
-        self.loss = -1 * self.p_energy + value_loss_scale * self.v_loss + self.action_mean_divergence * zero_mean_regularization_factor
+        self.loss = -1 * self.p_energy + value_loss_scale * self.v_loss
 
         # The optimizer and optimization step tensor:
         self.optimizer = tf.train.AdamOptimizer(lr)
@@ -173,8 +176,7 @@ class AdvantageActorCritic(object):
         state = np.expand_dims(state, axis=0)
 
         # Sample the action values based on our current state
-        actions, means, entropy = sess.run((self.sampled_actions, self.action_means, self.entropy), feed_dict={self.states_p: state})
+        actions, entropy = sess.run((self.sampled_actions, self.entropy), feed_dict={self.states_p: state})
         actions = actions[0]
-        means = means[0]
         # print(actions, means)
         return actions

@@ -16,15 +16,19 @@ def text_to_screen(screen, text, x, y, size = 10,
         print('Font Error, saw it coming')
         raise e
 
+def distance(pos1, pos2):
+    x1, y1 = pos1
+    x2, y2 = pos2
+    return ((x1 - x2) ** 2 + (y1 - y2) ** 2) ** 0.5
 
 class SoccerEnvironment(object):
     action_space = 2
     width = 600
     height = 300
-    circle_radius = 25
+    circle_radius = 22
     # resistance_factors = [1.02, 1.02, 1.01]
-    resistance_factors = [1.01, 1.01, 1.02]
-    acceleration = 0.5
+    resistance_factors = [1.03, 1.03, 1.01]
+    acceleration = 0.25
     bounce_resistance = [1.3, 1.3, 2]
     max_steps_after_bounce = 400
     max_steps = 5000
@@ -41,8 +45,8 @@ class SoccerEnvironment(object):
 
 
     def reset(self):
-        self.p1_pos = (0.1 * self.width, 0.5 * self.height)
-        self.p2_pos = (0.9 * self.width, 0.5 * self.height)
+        self.p1_pos = (0.4 * self.width, 0.5 * self.height)
+        self.p2_pos = (0.6 * self.width, 0.5 * self.height)
         self.ball_pos = (0.5 * self.width, 0.5 * self.height)
 
         self.p1_speed = (0, 0)
@@ -97,10 +101,12 @@ class SoccerEnvironment(object):
         h = self.height
         hw = w / 2
         hh = h / 2
+        max_dist = (w**2 + h**2)**0.5
         p1_state = np.array([
             (self.p1_pos[0] - hw) / hw, (self.p1_pos[1] - hh) / hh,
             (self.p2_pos[0] - self.p1_pos[0]) / hw, (self.p2_pos[1] - self.p1_pos[1])/ hh,
             (self.ball_pos[0] - self.p1_pos[0]) / hw, (self.ball_pos[1] - self.p1_pos[1]) / hh,
+            distance(self.p1_pos, self.p2_pos)/max_dist, distance(self.p1_pos, self.ball_pos)/max_dist,
             self.p1_speed[0], self.p1_speed[1],
             self.p2_speed[0], self.p2_speed[1],
             self.ball_speed[0], self.ball_speed[1],
@@ -109,6 +115,7 @@ class SoccerEnvironment(object):
             -(self.p2_pos[0] - hw) / hw, (self.p2_pos[1] - hh) / hh,
             -(self.p1_pos[0] - self.p2_pos[0]) / hw, (self.p1_pos[1] - self.p2_pos[1])/ hh,
             -(self.ball_pos[0] - self.p2_pos[0]) / hw, (self.ball_pos[1] - self.p2_pos[1]) / hh,
+            distance(self.p2_pos, self.p1_pos) / max_dist, distance(self.p2_pos, self.ball_pos) / max_dist,
             -self.p2_speed[0], self.p2_speed[1],
             -self.p1_speed[0], self.p1_speed[1],
             -self.ball_speed[0], self.ball_speed[1],
@@ -186,14 +193,20 @@ class SoccerEnvironment(object):
 
     def __do_action__(self, speed, action, player):
         xs, ys = speed
-        xacc, yacc = np.clip(action, -1, 1) * self.acceleration
+
+        # Divide by maximum to create a square detection zone that scales instead of clips
+        if np.max(np.abs(action)) > 1.0:
+            xacc, yacc = (action/np.max(np.abs(action))) * self.acceleration
+        else:
+            xacc, yacc = action * self.acceleration
+        # xacc, yacc = np.clip(action, -1, 1) * self.acceleration
         if player == 2:
             xacc = -xacc
         xs += xacc
         ys += yacc
 
         # if action == 0:
-        #     return xs + self.acceleration, ys
+        #     return xvideos/s + self.acceleration, ys
         # if action == 1:
         #     return xs, ys + self.acceleration
         # if action == 2:
@@ -213,7 +226,7 @@ class SoccerEnvironment(object):
             return (-1.0, 1.0), True
         if self.steps > self.max_steps or self.steps_since_ball_touch > self.max_steps_after_bounce:
             self.reset()
-            return (-1.0, -1.0), True
+            return (-0.5, -0.5), True
         r1 = 0
         r2 = 0
         if self.get_total_speed(self.p1_speed) < 0.1:
@@ -221,11 +234,14 @@ class SoccerEnvironment(object):
         if self.get_total_speed(self.p2_speed) < 0.1:
             r2 += 0
 
+        r1 += 1.0 * self.ball_speed[0]/self.width
+        r2 += -1.0 * self.ball_speed[0]/self.width
+
         if (0, 2) in collisions:
-            r1 += 0
+            r1 += 0.001
             self.steps_since_ball_touch = 0
         if (1, 2) in collisions:
-            r2 += 0
+            r2 += 0.001
             self.steps_since_ball_touch = 0
 
         return (r1, r2), False
