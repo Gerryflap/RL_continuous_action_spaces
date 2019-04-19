@@ -27,19 +27,18 @@ ks = tf.keras
 inp = ks.Input((14,))
 x = inp
 x = ks.layers.Dense(256, activation='selu')(x)
-x = ks.layers.Dense(128, activation='selu')(x)
-x2 = ks.layers.Dense(64, activation='selu')(x)
+x2 = ks.layers.Dense(128, activation='selu')(x)
 alphas = ks.layers.Dense(2, activation='softplus')(x2)
 betas = ks.layers.Dense(2, activation='softplus')(x2)
 p_model = ks.Model(inputs=inp, outputs=[alphas, betas])
 
-x2 = ks.layers.Dense(64, activation='selu')(x)
+x2 = ks.layers.Dense(128, activation='selu')(x)
 value = ks.layers.Dense(1, activation='linear')(x2)
 v_model = ks.Model(inputs=inp, outputs=value)
 
 
 agent = baac.BetaAdvantageActorCritic(p_model, v_model, 2, lr=0.0001, gamma=0.99,
-                                      entropy_factor=0.00001, log=True, value_loss_scale=0.1, lambd=0.97, ppo_eps=0.2)
+                                      entropy_factor=0.001, log=True, value_loss_scale=0.1, lambd=0.97, ppo_eps=0.2)
 
 
 env = SoccerEnvironment(add_random=False)
