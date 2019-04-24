@@ -24,7 +24,7 @@ from environments.soccer_env import SoccerEnvironment
 
 ks = tf.keras
 
-inp = ks.Input((9,))
+inp = ks.Input((10,))
 x = inp
 x = ks.layers.Dense(256, activation='selu')(x)
 x2 = ks.layers.Dense(128, activation='selu')(x)
@@ -37,19 +37,18 @@ value = ks.layers.Dense(1, activation='linear')(x2)
 v_model = ks.Model(inputs=inp, outputs=value)
 
 
-agent = baac.BetaAdvantageActorCritic(p_model, v_model, 2, lr=0.0001, gamma=0.99,
-                                      entropy_factor=0.01, log=True, value_loss_scale=0.1, lambd=0.99, ppo_eps=0.2)
+agent = baac.BetaAdvantageActorCritic(p_model, v_model, 2, entropy_factor=0.003, gamma=0.97, lr=0.0004, lambd=0.99, value_loss_scale=0.3, ppo_eps=0.2, log=True)
 
 
-env = box2d_car_soccer_env.CarSoccerEnv(max_steps=1500, distance_to_ball_r_factor=0.1, distance_to_goal_r_factor=1.0)
+env = box2d_car_soccer_env.CarSoccerEnv(max_steps=1500, distance_to_ball_r_factor=1.0, distance_to_goal_r_factor=0.0)
 
 
-def modify_actions(actions):
-    if actions[0] > -0.1:
-        actions[0] = (actions[0] + 0.1)/1.1
-    else:
-        actions[0] = (actions[0] + 0.1)/0.9
-    return actions
+# def modify_actions(actions):
+#     if actions[0] > -0.1:
+#         actions[0] = (actions[0] + 0.1)/1.1
+#     else:
+#         actions[0] = (actions[0] + 0.1)/0.9
+#     return actions
 
 
 try:
@@ -70,15 +69,14 @@ try:
             score_2 = 0
             while not done:
                 actions_1 = agent_1.get_actions(sess, state_1)
-                actions_2 = modify_actions(agent_2.get_actions(sess, state_2))
-                real_a1, real_a2 = modify_actions(actions_1), modify_actions(actions_2)
-                (new_state_1, new_state_2), (r1, r2), done, _ = env.step(real_a1, real_a2)
+                actions_2 = agent_2.get_actions(sess, state_2)
+                (new_state_1, new_state_2), (r1, r2), done, _ = env.step(actions_1, actions_2)
 
                 trajectory_1.append((state_1, actions_1, r1))
                 trajectory_2.append((state_2, actions_2, r2))
 
                 state_1, state_2 = new_state_1, new_state_2
-                if episode % 20 == 0 and episode != 0:
+                if episode % 200 == 0 and episode != 0:
                     # time.sleep(1 / 60)
                     env.draw()
                 score_1 += r1
