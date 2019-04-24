@@ -24,7 +24,7 @@ from environments.soccer_env import SoccerEnvironment
 
 ks = tf.keras
 
-inp = ks.Input((8,))
+inp = ks.Input((9,))
 x = inp
 x = ks.layers.Dense(256, activation='selu')(x)
 x2 = ks.layers.Dense(128, activation='selu')(x)

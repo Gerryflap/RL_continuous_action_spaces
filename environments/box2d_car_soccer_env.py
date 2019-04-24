@@ -114,11 +114,11 @@ class CarSoccerEnv(object):
 
     def step(self, action_1, action_2):
 
-        self.car_1.ApplyLinearImpulse(rotate(action_1[0] * 170, 0, self.car_1.angle), self.car_1.GetWorldPoint((0, 0)),
+        self.car_1.ApplyLinearImpulse(rotate(action_1[0] * 370, 0, self.car_1.angle), self.car_1.GetWorldPoint((0, 0)),
                                       True)
         self.car_1.ApplyAngularImpulse(action_1[1] * 200, True)
 
-        self.car_2.ApplyLinearImpulse(rotate(action_2[0] * 170, 0, self.car_2.angle), self.car_2.GetWorldPoint((0, 0)),
+        self.car_2.ApplyLinearImpulse(rotate(action_2[0] * 370, 0, self.car_2.angle), self.car_2.GetWorldPoint((0, 0)),
                                       True)
         self.car_2.ApplyAngularImpulse(action_2[1] * 200, True)
 
@@ -164,7 +164,7 @@ class CarSoccerEnv(object):
         if self.max_steps != -1 and self.steps > self.max_steps:
             return self.__state__(), (-1, -1), True, None
 
-        return self.__state__(), (0, 0), False, None
+        return self.__state__(), (r_1, r_2), False, None
 
     def render(self):
         if self.viewer is None:
@@ -201,10 +201,10 @@ class CarSoccerEnv(object):
         c2_angle_error_other, c2_dist_other = calc_angle_error_and_dist(self.car_2, self.car_1.position)
 
         c1_state = np.array([self.car_1.position[0] / field_width, self.car_1.position[1] / field_height, c1_angle_error_target,
-                             c1_angle_error_other, c1_dist_target, c1_dist_other, 0, 0])
+                             c1_angle_error_other, c1_dist_target, c1_dist_other, 0, 0, self.car_1.angle])
 
         c2_state = np.array([self.car_2.position[0] / field_width, self.car_2.position[1] / field_height, c2_angle_error_target,
-                             c2_angle_error_other, c2_dist_target, c2_dist_other, 0, 1])
+                             c2_angle_error_other, c2_dist_target, c2_dist_other, 0, 1, self.car_2.angle])
 
         return c1_state, c2_state
 
