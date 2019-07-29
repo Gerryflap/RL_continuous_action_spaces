@@ -9,28 +9,21 @@ from collections import defaultdict
 
 import matplotlib
 import numpy as np
+import os
+os.environ['CUDA_VISIBLE_DEVICES']='-1'
 import tensorflow as tf
-from algorithms import advantage_actor_critic as aac, random_agent, soccer_agent, linear_agent_switch_wrapper, \
-    beta_advantage_actor_critic as baac
-from algorithms import simple_policy_optimization as spo
-from algorithms import simple_policy_optimization_with_entropy as spowe
-from algorithms import simple_policy_optimization_rnn as spornn
-from algorithms import dummy_agent
-from environments import multiplayer_car_env
-import matplotlib.pyplot as plt
-import competition_system.matchmaking_systems as ms
-
-from environments.soccer_env import SoccerEnvironment
+from algorithms import beta_advantage_actor_critic as baac
+from environments import prisoners_dilemma_env
 
 ks = tf.keras
 
 def make_models():
-    inp = ks.Input((14,))
+    inp = ks.Input((2,))
     x = inp
     x = ks.layers.Dense(256, activation='selu')(x)
     x2 = ks.layers.Dense(128, activation='selu')(x)
-    alphas = ks.layers.Dense(2, activation='softplus')(x2)
-    betas = ks.layers.Dense(2, activation='softplus')(x2)
+    alphas = ks.layers.Dense(1, activation='softplus')(x2)
+    betas = ks.layers.Dense(1, activation='softplus')(x2)
     p_model = ks.Model(inputs=inp, outputs=[alphas, betas])
 
     x2 = ks.layers.Dense(128, activation='selu')(x)
@@ -40,23 +33,32 @@ def make_models():
 
 p_model, v_model = make_models()
 
-agent = baac.BetaAdvantageActorCritic(p_model, v_model, 2, lr=0.0001, gamma=0.99,
-                                      entropy_factor=0.001, log=True, value_loss_scale=0.1, lambd=0.97, ppo_eps=0.2)
-
+agent = baac.BetaAdvantageActorCritic(p_model, v_model, 1, entropy_factor=0.01, gamma=0.97, lr=0.0004, lambd=0.99, value_loss_scale=0.01, ppo_eps=0.2, log=True, log_name="ac_prisoners")
 
 def clone_agent(agent):
     p_model, v_model = make_models()
     p_model.set_weights(agent.p_model.get_weights())
     v_model.set_weights(agent.v_model.get_weights())
-    new_agent = baac.BetaAdvantageActorCritic(p_model, v_model, 2, log=False)
+    new_agent = baac.BetaAdvantageActorCritic(p_model, v_model, 1, log=False)
     return new_agent
 
-env = SoccerEnvironment(add_random=False)
+# Previously max_steps = 10
+env = prisoners_dilemma_env.PrisonersDilemmaEnv()
+
+
+# def modify_actions(actions):
+#     if actions[0] > -0.1:
+#         actions[0] = (actions[0] + 0.1)/1.1
+#     else:
+#         actions[0] = (actions[0] + 0.1)/0.9
+#     return actions
+
 
 try:
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
         episode = 0
+
         agents = [agent, clone_agent(agent)]
 
         while True:
@@ -73,6 +75,10 @@ try:
             while not done:
                 actions_1 = agent_1.get_actions(sess, state_1)
                 actions_2 = agent_2.get_actions(sess, state_2)
+
+                if np.isnan(actions_1).any() or np.isnan(actions_1).any():
+                    print("NaN detected: reverting!")
+                    agents[0] = clone_agent(agents[1])
                 (new_state_1, new_state_2), (r1, r2), done, _ = env.step(actions_1, actions_2)
 
                 trajectory_1.append((state_1, actions_1, r1))
@@ -80,8 +86,8 @@ try:
 
                 state_1, state_2 = new_state_1, new_state_2
                 if episode % 200 == 0 and episode != 0:
-                    time.sleep(1 / 60)
-                    env.render()
+                    # time.sleep(1 / 60)
+                    env.draw()
                 score_1 += r1
                 score_2 += r2
             if first == 0:
@@ -95,8 +101,10 @@ try:
                 outcome = 2
             else:
                 outcome = 0
-            if episode % 200 == 0:
+
+            if episode % 100 == 0:
                 agents[1] = clone_agent(agents[0])
+
             episode += 1
 
 except KeyboardInterrupt:

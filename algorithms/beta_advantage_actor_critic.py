@@ -5,12 +5,13 @@
     - Policy maximizes advantage and entropy
     - Value model minimizes the mean squared error with actual returns
 """
+from tensorflow.python.framework.errors_impl import InvalidArgumentError
 import tensorflow as tf
 import numpy as np
 
 
 class BetaAdvantageActorCritic(object):
-    def __init__(self, policy_model: tf.keras.Model, value_model: tf.keras.Model, n_actions, lr=0.001, gamma=0.99, entropy_factor=0.1, value_loss_scale=0.5, log=False, lambd=1.0, ppo_eps=None):
+    def __init__(self, policy_model: tf.keras.Model, value_model: tf.keras.Model, n_actions, lr=0.001, gamma=0.99, entropy_factor=0.1, value_loss_scale=0.5, log=False, lambd=1.0, ppo_eps=None, log_name="ac"):
         """
         Initializes the Simple Policy Optimizer With Entropy
         :param policy_model: A Keras model that takes the state as input and outputs action means and action scales as a
@@ -25,6 +26,9 @@ class BetaAdvantageActorCritic(object):
         self.log = log
         self.lambd = lambd
         self.steps = 0
+
+        self.p_model = policy_model
+        self.v_model = value_model
 
         # The input states matrix
         self.states_p = policy_model.input
@@ -96,9 +100,17 @@ class BetaAdvantageActorCritic(object):
 
         # The optimizer and optimization step tensor:
         self.optimizer = tf.train.AdamOptimizer(lr)
-        self.optimize_op = self.optimizer.minimize(self.loss)
+        gradients, variables = zip(*self.optimizer.compute_gradients(self.loss))
+        flat_grads = tf.concat([tf.reshape(g, [-1]) for g in gradients if g is not None], axis=0)
+        tf.summary.scalar("grad mean (before clip)", tf.reduce_mean(flat_grads))
+        tf.summary.scalar("grad_max (before clip)", tf.reduce_max(flat_grads))
+        tf.summary.scalar("grad_min (before clip)", tf.reduce_min(flat_grads))
+
+        gradients, _ = tf.clip_by_global_norm(gradients, 1.0)
+        self.optimize_op = self.optimizer.apply_gradients(zip(gradients, variables))
+        # self.optimize_op = self.optimizer.minimize(self.loss)
         self.summary_op = tf.summary.merge_all()
-        self.writer = tf.summary.FileWriter("./logs/ac")
+        self.writer = tf.summary.FileWriter("./logs/"+log_name)
 
     def _generate_batch(self, trajectory, sess):
         """
@@ -123,10 +135,12 @@ class BetaAdvantageActorCritic(object):
         else:
             predicted_values = sess.run(self.predicted_values, feed_dict={self.states_v: states})[:, 0]
 
+
+
         # Go backwards over the trajectory and calculate all the discounted rewards using dynamic programming
         for i in range(len(trajectory) - 1, -1, -1):
             if self.lambd != 1.0:
-                pred_v = 0 if i == len(trajectory) - 1 else predicted_values[i+1]
+                pred_v = 0 if i == len(trajectory) - 1 or len(trajectory[i]) == 4 and trajectory[i][3] else predicted_values[i+1]
             else:
                 pred_v = 0
             discounted_reward_mc = self.gamma * discounted_reward
@@ -151,22 +165,26 @@ class BetaAdvantageActorCritic(object):
         states, actions, values = self._generate_batch(trajectory, sess)
 
         # Do one optimization step
-        if self.log:
-            _, mean_entropy_value, summary = sess.run((self.optimize_op, self.mean_entropy, self.summary_op), feed_dict={
-                self.actions_taken: actions,
-                self.states_p: states,
-                self.states_v: states,
-                self.summed_discounted_rewards: values,
-            })
-            self.writer.add_summary(summary, self.steps)
-            self.steps += 1
-        else:
-            _, mean_entropy_value = sess.run((self.optimize_op, self.mean_entropy), feed_dict={
-                self.actions_taken: actions,
-                self.states_p: states,
-                self.states_v: states,
-                self.summed_discounted_rewards: values,
-            })
+        try:
+            if self.log:
+                _, mean_entropy_value, summary = sess.run((self.optimize_op, self.mean_entropy, self.summary_op), feed_dict={
+                    self.actions_taken: actions,
+                    self.states_p: states,
+                    self.states_v: states,
+                    self.summed_discounted_rewards: values,
+                })
+                self.writer.add_summary(summary, self.steps)
+                self.steps += 1
+            else:
+                _, mean_entropy_value = sess.run((self.optimize_op, self.mean_entropy), feed_dict={
+                    self.actions_taken: actions,
+                    self.states_p: states,
+                    self.states_v: states,
+                    self.summed_discounted_rewards: values,
+                })
+        except InvalidArgumentError:
+            print("Training failed because of NaN value!")
+            return 0
 
         return mean_entropy_value
 

@@ -1,4 +1,5 @@
 import math
+import random
 import time
 import numpy as np
 
@@ -51,7 +52,7 @@ def calc_angle_error_and_dist(car, pos):
     angle_to_target = math.atan2(car.position[1] - pos[1], car.position[0] - pos[0])
     distance_to_target = distance(car.position, pos)
     distance_to_target /= scale_factor
-    angle_error = (car.angle - angle_to_target) % (2 * math.pi)
+    angle_error = (car.angle - angle_to_target + math.pi) % (2 * math.pi)
     angle_error -= math.pi
     angle_error /= math.pi
     return angle_error, distance_to_target
@@ -84,11 +85,11 @@ class CarSoccerEnv(object):
 
         # Construct ground
         ground_top = self.w.CreateStaticBody(position=(field_width / 2, field_height / 2))
-        ground_top.CreateFixture(shape=Box2D.b2.polygonShape(box=(field_width, 5)), density=1.0, restitution=0.0,
+        ground_top.CreateFixture(shape=Box2D.b2.polygonShape(box=(field_width, 5)), density=1.0, restitution=1.0,
                                  friction=1.0)
 
         ground_bot = self.w.CreateStaticBody(position=(field_width / 2, -field_height / 2))
-        ground_bot.CreateFixture(shape=Box2D.b2.polygonShape(box=(field_width, 5)), density=1.0, restitution=0.0,
+        ground_bot.CreateFixture(shape=Box2D.b2.polygonShape(box=(field_width, 5)), density=1.0, restitution=1.0,
                                  friction=1.0)
 
         # ground_left_top = self.w.CreateStaticBody(position=(-field_width / 2, -field_height / 2 + 5 * field_height/6))
@@ -120,16 +121,24 @@ class CarSoccerEnv(object):
 
         return self.__state__()
 
+    def reset_random(self):
+        self.reset()
+        self.ball.position = (random.random() * (field_width*0.8) - 0.8*field_width/2, random.random() * (field_height*0.8) - 0.8*field_height/2)
+        self.car_1.position = (-random.random() * 5 - 5 + self.ball.position[0], random.random() * 10 - 5 + self.ball.position[1])
+        self.car_2.position = (random.random() * 5 + 5 + self.ball.position[0], random.random() * 10 - 5 + self.ball.position[1])
+        return self.__state__()
+
     def step(self, action_1, action_2):
 
         self.car_1.ApplyLinearImpulse(rotate(action_1[0] * 170, 0, self.car_1.angle), self.car_1.GetWorldPoint((0, 0)),
                                       True)
-        self.car_1.ApplyAngularImpulse(action_1[1] * 200, True)
+        self.car_1.ApplyAngularImpulse(action_1[1] * 500, True)
 
         self.car_2.ApplyLinearImpulse(rotate(action_2[0] * 170, 0, self.car_2.angle), self.car_2.GetWorldPoint((0, 0)),
                                       True)
-        self.car_2.ApplyAngularImpulse(action_2[1] * 200, True)
+        self.car_2.ApplyAngularImpulse(action_2[1] * 500, True)
         # print(self.car_1.angle, calc_angle_error_and_dist(self.car_1, self.ball.position)[0])
+
 
         p1_old_ball_dist = distance(self.car_1.position, self.ball.position)
         p2_old_ball_dist = distance(self.car_2.position, self.ball.position)
@@ -167,23 +176,19 @@ class CarSoccerEnv(object):
             r_2 += 1
             return self.__state__(), (r_1, r_2), True, None
 
-        if self.car_1.position[0] < -field_width / 2:
-            self.car_1.ApplyLinearImpulse((1000, 0),
-                                          self.car_1.GetWorldPoint((0, 0)),
-                                          True)
+        for car in [self.car_1, self.car_2]:
+            if car.position[0] < -field_width / 2:
+                car.ApplyLinearImpulse((1000, 0), car.GetWorldPoint((0, 0)), True)
 
-        if self.car_1.position[0] > field_width / 2:
-            self.car_1.ApplyLinearImpulse((-1000, 0),
-                                          self.car_1.GetWorldPoint((0, 0)),
-                                          True)
+            if car.position[0] > field_width / 2:
+                car.ApplyLinearImpulse((-1000, 0), car.GetWorldPoint((0, 0)), True)
 
-        if self.car_2.position[0] < -field_width / 2:
-            self.car_2.ApplyLinearImpulse((1000, 0),
-                                          self.car_2.GetWorldPoint((0, 0)), True)
+            # if car.position[1] < -field_height / 2:
+            #     car.ApplyLinearImpulse((0, 1000), car.GetWorldPoint((0, 0)), True)
+            #
+            # if car.position[1] > field_height / 2:
+            #     car.ApplyLinearImpulse((0, -1000), car.GetWorldPoint((0, 0)), True)
 
-        if self.car_2.position[0] > field_width / 2:
-            self.car_2.ApplyLinearImpulse((-1000, 0),
-                                          self.car_2.GetWorldPoint((0, 0)), True)
 
         self.steps += 1
         if self.max_steps != -1 and self.steps > self.max_steps:
@@ -226,11 +231,17 @@ class CarSoccerEnv(object):
 
         c1_state = np.array(
             [self.car_1.position[0] / field_width, self.car_1.position[1] / field_height, c1_angle_error_target,
-             c1_angle_error_other, c1_dist_target, c1_dist_other, velocity(self.car_1) / 100, 0, self.car_1.angle/math.pi, velocity(self.ball, return_vector=True)[0]/100])
+             c1_angle_error_other, c1_dist_target, c1_dist_other, velocity(self.car_1) / 100, 0, np.sin(self.car_2.angle), np.cos(self.car_2.angle), velocity(self.ball, return_vector=True)[0]/100])
 
         c2_state = np.array(
             [self.car_2.position[0] / field_width, self.car_2.position[1] / field_height, c2_angle_error_target,
-             c2_angle_error_other, c2_dist_target, c2_dist_other, velocity(self.car_2) / 100, 1, self.car_2.angle/math.pi, velocity(self.ball, return_vector=True)[0]/100])
+             c2_angle_error_other, c2_dist_target, c2_dist_other, velocity(self.car_2) / 100, 1, np.sin(self.car_2.angle), np.cos(self.car_2.angle), velocity(self.ball, return_vector=True)[0]/100])
+
+        # c1_state = np.array(
+        #     [c1_angle_error_target, c1_angle_error_other, c1_dist_target, c1_dist_other, velocity(self.car_1) / 100])
+        #
+        # c2_state = np.array(
+        #     [c2_angle_error_target, c2_angle_error_other, c2_dist_target, c2_dist_other, velocity(self.car_2) / 100])
 
         return c1_state, c2_state
 

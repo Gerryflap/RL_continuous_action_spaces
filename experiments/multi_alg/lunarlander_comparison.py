@@ -120,7 +120,7 @@ def run_policy(policy_type, episodes):
 import multiprocessing as mp
 import matplotlib.pyplot as plt
 
-N_GAMES = 5000
+N_GAMES = 500
 
 policies = [
     "ac",
