@@ -28,7 +28,7 @@ ks = tf.keras
 
 
 terminate_without_terminal_state = True
-action_repeat_frames = 10
+action_repeat_frames = 5
 
 def make_models():
     inp = ks.Input((11,))
@@ -57,15 +57,16 @@ def make_models():
 
 p_model, v_model = make_models()
 
+gamma = 0.97
 
-log_name = "ac_cs"
+log_name = "ac_cs_%f"%gamma
 if terminate_without_terminal_state:
     log_name += "_no_term"
 
 if action_repeat_frames > 1:
     log_name += "_rep_%d"%(action_repeat_frames,)
 
-agent = baac.BetaAdvantageActorCritic(p_model, v_model, 2, entropy_factor=0.001, gamma=0.997, lr=0.0004, lambd=0.99, value_loss_scale=0.01, ppo_eps=0.2, log=True, log_name=log_name)
+agent = baac.BetaAdvantageActorCritic(p_model, v_model, 2, entropy_factor=0.001, gamma=gamma, lr=0.0004, lambd=0.99, value_loss_scale=0.01, ppo_eps=0.2, log=True, log_name=log_name)
 
 def clone_agent(agent):
     p_model, v_model = make_models()
@@ -75,7 +76,7 @@ def clone_agent(agent):
     return new_agent
 
 
-max_steps = 60
+max_steps = 30
 
 # Previously max_steps = 10
 env = box2d_car_soccer_env.CarSoccerEnv(max_steps=-1 if terminate_without_terminal_state else max_steps, distance_to_ball_r_factor=0.2, distance_to_goal_r_factor=1.0)
@@ -95,6 +96,8 @@ try:
 
         agents = [agent, clone_agent(agent)]
 
+        trajectory = []
+
         while True:
             first = random.choice([0, 1])
             agent_1 = agents[first]
@@ -104,10 +107,12 @@ try:
             state_1, state_2 = env.reset()
 
             done = False
-            trajectory_1 = []
-            trajectory_2 = []
+
             score_1 = 0
             score_2 = 0
+
+            trajectory_1 = []
+            trajectory_2 = []
 
             step = 0
             while not done:
@@ -117,13 +122,17 @@ try:
                 if np.isnan(actions_1).any() or np.isnan(actions_1).any():
                     print("NaN detected: reverting!")
                     agents[0] = clone_agent(agents[1])
+                r1t, r2t = 0, 0
                 for _ in range(action_repeat_frames):
                     (new_state_1, new_state_2), (r1, r2), done, _ = env.step(actions_1, actions_2)
+                    r1t += r1
+                    r2t += r2
                     if episode % 200 == 0 and episode != 0:
                         # time.sleep(1 / 60)
                         env.draw()
                     if done:
                         break
+                r1, r2 = r1t, r2t
 
                 trajectory_1.append((state_1, actions_1, r1, done))
                 trajectory_2.append((state_2, actions_2, r2, done))
@@ -135,10 +144,19 @@ try:
                 step += 1
                 if step > max_steps:
                     break
+
             if first == 0:
-                agent_1.train(sess, trajectory_1)
+                trajectory += trajectory_1
             else:
-                agent_2.train(sess, trajectory_2)
+                trajectory += trajectory_2
+
+            if episode%10 == 0:
+                if first == 0:
+                    agent_1.train(sess, trajectory)
+                else:
+                    agent_2.train(sess, trajectory)
+                trajectory = []
+
 
             if score_1 > score_2:
                 outcome = 1
