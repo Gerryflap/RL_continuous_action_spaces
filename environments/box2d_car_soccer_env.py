@@ -109,14 +109,14 @@ class CarSoccerEnv(object):
         #                            friction=1.0)
 
         self.ball = self.w.CreateDynamicBody(position=(0, 0), bullet=True, linearDamping=0.3)
-        self.ball.CreateCircleFixture(radius=3, density=0.1, restitution=0.5, friction=0.1)
+        self.ball.CreateCircleFixture(radius=3, density=0.1, restitution=0.9, friction=0.01)
 
         self.car_1 = self.w.CreateDynamicBody(position=(-10, 0), bullet=True, linearDamping=0.7, angularDamping=10.0)
-        self.car_1.CreateFixture(shape=Box2D.b2.polygonShape(box=(2.5, 1.8)), density=5.0, restitution=0.5,
+        self.car_1.CreateFixture(shape=Box2D.b2.polygonShape(box=(2.5, 1.8)), density=5.0, restitution=0.9,
                                  friction=1.0)
 
         self.car_2 = self.w.CreateDynamicBody(position=(10, 0), bullet=True, linearDamping=0.7, angularDamping=10.0, angle=math.pi)
-        self.car_2.CreateFixture(shape=Box2D.b2.polygonShape(box=(2.5, 1.8)), density=5.0, restitution=0.5,
+        self.car_2.CreateFixture(shape=Box2D.b2.polygonShape(box=(2.5, 1.8)), density=5.0, restitution=0.9,
                                  friction=1.0)
 
         return self.__state__()
@@ -231,7 +231,7 @@ class CarSoccerEnv(object):
 
         c1_state = np.array(
             [self.car_1.position[0] / field_width, self.car_1.position[1] / field_height, c1_angle_error_target,
-             c1_angle_error_other, c1_dist_target, c1_dist_other, velocity(self.car_1) / 100, 0, np.sin(self.car_2.angle), np.cos(self.car_2.angle), velocity(self.ball, return_vector=True)[0]/100])
+             c1_angle_error_other, c1_dist_target, c1_dist_other, velocity(self.car_1) / 100, 0, np.sin(self.car_1.angle), np.cos(self.car_1.angle), velocity(self.ball, return_vector=True)[0]/100])
 
         c2_state = np.array(
             [self.car_2.position[0] / field_width, self.car_2.position[1] / field_height, c2_angle_error_target,

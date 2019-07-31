@@ -143,6 +143,8 @@ class BetaAdvantageActorCritic(object):
                 pred_v = 0 if i == len(trajectory) - 1 or len(trajectory[i]) == 4 and trajectory[i][3] else predicted_values[i+1]
             else:
                 pred_v = 0
+            if trajectory[i][3]:
+                discounted_reward = 0
             discounted_reward_mc = self.gamma * discounted_reward
             discounted_reward_td = self.gamma * pred_v
             discounted_reward = trajectory[i][2] + self.lambd * discounted_reward_mc + (1 - self.lambd) * discounted_reward_td

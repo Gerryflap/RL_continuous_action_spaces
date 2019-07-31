@@ -13,7 +13,7 @@ import os
 os.environ['CUDA_VISIBLE_DEVICES']='-1'
 import tensorflow as tf
 from algorithms import advantage_actor_critic as aac, random_agent, soccer_agent, linear_agent_switch_wrapper, \
-    beta_advantage_actor_critic as baac
+    beta_advantage_actor_critic as baac, carsoccer_agent
 from algorithms import simple_policy_optimization as spo
 from algorithms import simple_policy_optimization_with_entropy as spowe
 from algorithms import simple_policy_optimization_rnn as spornn
@@ -26,9 +26,14 @@ from environments.soccer_env import SoccerEnvironment
 
 ks = tf.keras
 
+# This option is currently broken and should stay on false
+terminate_without_terminal_state = False
 
-terminate_without_terminal_state = True
-action_repeat_frames = 5
+action_repeat_frames = 10
+max_steps = 30
+agent_cloning_interval = 1000
+agent_picking_chance = 0.3
+gamma = 0.97
 
 def make_models():
     inp = ks.Input((11,))
@@ -57,7 +62,7 @@ def make_models():
 
 p_model, v_model = make_models()
 
-gamma = 0.97
+
 
 log_name = "ac_cs_%f"%gamma
 if terminate_without_terminal_state:
@@ -66,7 +71,7 @@ if terminate_without_terminal_state:
 if action_repeat_frames > 1:
     log_name += "_rep_%d"%(action_repeat_frames,)
 
-agent = baac.BetaAdvantageActorCritic(p_model, v_model, 2, entropy_factor=0.001, gamma=gamma, lr=0.0004, lambd=0.99, value_loss_scale=0.01, ppo_eps=0.2, log=True, log_name=log_name)
+agent = baac.BetaAdvantageActorCritic(p_model, v_model, 2, entropy_factor=0.005, gamma=gamma, lr=0.0004, lambd=0.99, value_loss_scale=0.001, ppo_eps=0.2, log=True, log_name=log_name)
 
 def clone_agent(agent):
     p_model, v_model = make_models()
@@ -76,10 +81,10 @@ def clone_agent(agent):
     return new_agent
 
 
-max_steps = 30
+
 
 # Previously max_steps = 10
-env = box2d_car_soccer_env.CarSoccerEnv(max_steps=-1 if terminate_without_terminal_state else max_steps, distance_to_ball_r_factor=0.2, distance_to_goal_r_factor=1.0)
+env = box2d_car_soccer_env.CarSoccerEnv(max_steps=-1 if terminate_without_terminal_state else max_steps*action_repeat_frames, distance_to_ball_r_factor=0.0, distance_to_goal_r_factor=0.0)
 
 
 # def modify_actions(actions):
@@ -89,16 +94,41 @@ env = box2d_car_soccer_env.CarSoccerEnv(max_steps=-1 if terminate_without_termin
 #         actions[0] = (actions[0] + 0.1)/0.9
 #     return actions
 
+old_agents = []
+previous_agent = clone_agent(agent)
+
+
+def pick_random_agent(episode):
+    if not old_agents:
+        # If there are no older agents, just return the clone made at the start
+        return previous_agent
+    else:
+        # Compute the probability of picking the previous agent. This should increase to the agent_picking_chance slowly over the agent_cloning_interval
+        p = agent_picking_chance * ((episode%agent_cloning_interval)/agent_cloning_interval)
+        if random.random() < p:
+            return previous_agent
+        # Enter picking loop (the list is traversed in the other direction in order to let the most recent have the highest chance
+        for agent in old_agents[::-1]:
+            if agent_picking_chance > random.random():
+                return agent
+
+        # If the list is empty and none is picked, return the last one
+        return old_agents[-1]
+
+
 try:
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
         episode = 0
 
         agents = [agent, clone_agent(agent)]
-
+        # agents = [agent, carsoccer_agent.CarSoccerAgent(2)]
         trajectory = []
 
         while True:
+
+            # Place a random previous agent in here
+            agents[1] = pick_random_agent(episode)
             first = random.choice([0, 1])
             agent_1 = agents[first]
             agent_2 = agents[1-first]
@@ -119,7 +149,7 @@ try:
                 actions_1 = agent_1.get_actions(sess, state_1)
                 actions_2 = agent_2.get_actions(sess, state_2)
 
-                if np.isnan(actions_1).any() or np.isnan(actions_1).any():
+                if np.isnan(actions_1).any() or np.isnan(actions_2).any():
                     print("NaN detected: reverting!")
                     agents[0] = clone_agent(agents[1])
                 r1t, r2t = 0, 0
@@ -165,15 +195,17 @@ try:
             else:
                 outcome = 0
 
-            if episode % 1000 == 0:
-                agents[1] = clone_agent(agents[0])
+            if episode % agent_cloning_interval == 0:
+                old_agents.append(previous_agent)
+                previous_agent = clone_agent(agents[0])
+                pass
 
-            if episode % 20000 == 0:
-                if max_steps < 2000:
-                    max_steps *= 2
-
-                    if not terminate_without_terminal_state:
-                        env.max_steps = max_steps * action_repeat_frames
+            # if episode % 20000 == 0:
+            #     if max_steps < 2000:
+            #         max_steps *= 2
+            #
+            #         if not terminate_without_terminal_state:
+            #             env.max_steps = max_steps * action_repeat_frames
 
             episode += 1
 
