@@ -155,7 +155,7 @@ class MPCarEnv(object):
             self.done = True
 
         if dist_2 < 20:
-            r_1 -= 1z
+            r_1 -= 1
             r_2 += 1
             self.done = True
 
