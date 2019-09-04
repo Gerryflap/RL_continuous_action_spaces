@@ -30,30 +30,30 @@ ks = tf.keras
 terminate_without_terminal_state = False
 
 action_repeat_frames = 10
-max_steps = 30
-agent_cloning_interval = 1000
+max_steps = 40
+agent_cloning_interval = 2500
 agent_picking_chance = 0.3
 gamma = 0.97
 
 def make_models():
     inp = ks.Input((11,))
     x = inp
-    x = ks.layers.Dense(256)(x)
+    x = ks.layers.Dense(128)(x)
     x = ks.layers.BatchNormalization()(x)
     x = ks.layers.Activation('selu')(x)
 
-    x = ks.layers.Dense(256)(x)
+    x = ks.layers.Dense(64)(x)
     x = ks.layers.BatchNormalization()(x)
     x = ks.layers.Activation('selu')(x)
 
-    x2 = ks.layers.Dense(128)(x)
+    x2 = ks.layers.Dense(32)(x)
     x2 = ks.layers.BatchNormalization()(x2)
     x2 = ks.layers.Activation('selu')(x2)
     alphas = ks.layers.Dense(2, activation='softplus')(x2)
     betas = ks.layers.Dense(2, activation='softplus')(x2)
     p_model = ks.Model(inputs=inp, outputs=[alphas, betas])
 
-    x2 = ks.layers.Dense(128)(x)
+    x2 = ks.layers.Dense(32)(x)
     x2 = ks.layers.BatchNormalization()(x2)
     x2 = ks.layers.Activation('selu')(x2)
     value = ks.layers.Dense(1, activation='linear')(x2)
@@ -71,7 +71,7 @@ if terminate_without_terminal_state:
 if action_repeat_frames > 1:
     log_name += "_rep_%d"%(action_repeat_frames,)
 
-agent = baac.BetaAdvantageActorCritic(p_model, v_model, 2, entropy_factor=0.005, gamma=gamma, lr=0.0004, lambd=0.99, value_loss_scale=0.001, ppo_eps=0.2, log=True, log_name=log_name)
+agent = baac.BetaAdvantageActorCritic(p_model, v_model, 2, entropy_factor=0.0005, gamma=gamma, lr=0.0004, lambd=0.99, value_loss_scale=0.001, ppo_eps=0.2, log=True, log_name=log_name)
 
 def clone_agent(agent):
     p_model, v_model = make_models()

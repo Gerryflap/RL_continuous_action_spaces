@@ -32,7 +32,9 @@ action_repeat_frames = 4
 max_steps = 50
 batch_size = 10
 # In number of episodes: (WARNING: Tensorboard shows number of training updates, which is episodes/batch_size)
-agent_cloning_interval = 20000
+agent_cloning_interval = 5000
+# Number of episodes before agent switching will begin (useful for pre-training)
+warmup_episodes = 20000
 agent_picking_chance = 0.3
 max_agents = 20
 gamma = 0.97
@@ -102,7 +104,7 @@ if terminate_without_terminal_state:
 if action_repeat_frames > 1:
     log_name += "_rep_%d"%(action_repeat_frames,)
 
-agent = baac.BetaAdvantageActorCritic(p_model, v_model, 2, entropy_factor=0.005, gamma=gamma, lr=0.0004, lambd=0.99, value_loss_scale=0.001, ppo_eps=0.2, log=True, log_name=log_name)
+agent = baac.BetaAdvantageActorCritic(p_model, v_model, 2, entropy_factor=0.01, gamma=gamma, lr=0.0004, lambd=0.99, value_loss_scale=0.001, ppo_eps=0.2, log=True, log_name=log_name)
 
 def clone_agent(agent):
     p_model, v_model = make_models()
@@ -117,7 +119,7 @@ def clone_agent(agent):
 # Previously max_steps = 10
 env = multiplayer_car_env.MPCarEnv(
     max_steps=10000000 if terminate_without_terminal_state else max_steps*action_repeat_frames,
-    allow_red_to_enter_target_zone=False,
+    allow_red_to_enter_target_zone=True,
     force_fair_game=True,
     speed_limits=(-2, 20),
     throttle_scale=0.5,
@@ -233,7 +235,7 @@ try:
             else:
                 outcome = 0
 
-            if episode % agent_cloning_interval == 0:
+            if episode % agent_cloning_interval == 0 and episode >= warmup_episodes:
                 old_agents.append(previous_agent)
                 if len(old_agents) > max_agents:
                     old_agents = old_agents[-max_agents:]

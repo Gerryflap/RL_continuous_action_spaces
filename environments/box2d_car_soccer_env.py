@@ -91,7 +91,7 @@ class CarSoccerEnv(object):
         ground_bot = self.w.CreateStaticBody(position=(field_width / 2, -field_height / 2))
         ground_bot.CreateFixture(shape=Box2D.b2.polygonShape(box=(field_width, 5)), density=1.0, restitution=1.0,
                                  friction=1.0)
-
+        #
         # ground_left_top = self.w.CreateStaticBody(position=(-field_width / 2, -field_height / 2 + 5 * field_height/6))
         # ground_left_top.CreateFixture(shape=Box2D.b2.polygonShape(box=(5, field_height/6)), density=1.0, restitution=0.0,
         #                           friction=1.0)
@@ -192,7 +192,7 @@ class CarSoccerEnv(object):
 
         self.steps += 1
         if self.max_steps != -1 and self.steps > self.max_steps:
-            return self.__state__(), (-1, -1), True, None
+            return self.__state__(), (0, 0), True, None
 
         return self.__state__(), (r_1, r_2), False, None
 

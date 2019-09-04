@@ -172,10 +172,10 @@ class MPCarEnv(object):
         c2_angle_error_other, c2_dist_other = calc_angle_error_and_dist(self.car_2, self.car_1.pos())
 
         c1_state = [self.car_1.x / screen_width, self.car_1.y / screen_height, c1_angle_error_target,
-                             c1_angle_error_other, c1_dist_target, c1_dist_other, self.car_1.speed * 0.1]
+                             c1_angle_error_other, c1_dist_target, c1_dist_other, self.car_1.speed * 0.1, ]# self.car_1.angle - np.pi, self.car_2.speed * 0.1, self.car_2.angle - np.pi]
 
         c2_state = [self.car_2.x / screen_width, self.car_2.y / screen_height, c2_angle_error_target,
-                    c2_angle_error_other, c2_dist_target, c2_dist_other, self.car_2.speed * 0.1]
+                    c2_angle_error_other, c2_dist_target, c2_dist_other, self.car_2.speed * 0.1, ]# self.car_2.angle - np.pi, self.car_1.speed * 0.1, self.car_1.angle - np.pi]
 
         if self.add_player_num_to_state:
             c1_state.append(0)
