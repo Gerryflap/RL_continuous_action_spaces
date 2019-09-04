@@ -82,7 +82,7 @@ class Car(object):
 
 
 class MPCarEnv(object):
-    def __init__(self, allow_red_to_enter_target_zone=False, force_fair_game=False, speed_limits=(-2, 10), throttle_scale=0.2, steer_scale=5e-1, max_steps=1000):
+    def __init__(self, allow_red_to_enter_target_zone=False, force_fair_game=False, speed_limits=(-2, 10), throttle_scale=0.2, steer_scale=5e-1, max_steps=1000, add_player_num_to_state=False):
         self.car_1 = None
         self.car_2 = None
         self.target = None
@@ -95,6 +95,7 @@ class MPCarEnv(object):
         self.throttle_scale = throttle_scale
         self.steer_scale = steer_scale
         self.max_steps = max_steps
+        self.add_player_num_to_state = add_player_num_to_state
 
     def reset(self):
         self.target = random.randint(0, screen_width - 1), random.randint(0, screen_height - 1)
@@ -154,7 +155,7 @@ class MPCarEnv(object):
             self.done = True
 
         if dist_2 < 20:
-            r_1 -= 1
+            r_1 -= 1z
             r_2 += 1
             self.done = True
 
@@ -170,10 +171,16 @@ class MPCarEnv(object):
         c2_angle_error_target, c2_dist_target = calc_angle_error_and_dist(self.car_2, self.target)
         c2_angle_error_other, c2_dist_other = calc_angle_error_and_dist(self.car_2, self.car_1.pos())
 
-        c1_state = np.array([self.car_1.x / screen_width, self.car_1.y / screen_height, c1_angle_error_target,
-                             c1_angle_error_other, c1_dist_target, c1_dist_other, self.car_1.speed * 0.1])
+        c1_state = [self.car_1.x / screen_width, self.car_1.y / screen_height, c1_angle_error_target,
+                             c1_angle_error_other, c1_dist_target, c1_dist_other, self.car_1.speed * 0.1]
 
-        c2_state = np.array([self.car_2.x / screen_width, self.car_2.y / screen_height, c2_angle_error_target,
-                             c2_angle_error_other, c2_dist_target, c2_dist_other, self.car_2.speed * 0.1])
+        c2_state = [self.car_2.x / screen_width, self.car_2.y / screen_height, c2_angle_error_target,
+                    c2_angle_error_other, c2_dist_target, c2_dist_other, self.car_2.speed * 0.1]
+
+        if self.add_player_num_to_state:
+            c1_state.append(0)
+            c2_state.append(1)
+
+        c1_state, c2_state = np.array(c1_state), np.array(c2_state)
 
         return c1_state, c2_state

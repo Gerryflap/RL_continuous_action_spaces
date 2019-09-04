@@ -79,7 +79,7 @@ try:
                 trajectory_2.append((state_2, actions_2, r2))
 
                 state_1, state_2 = new_state_1, new_state_2
-                if episode % 200 == 0 and episode != 0:
+                if episode % 2 == 0 and episode != 0:
                     time.sleep(1 / 60)
                     env.render()
                 score_1 += r1
