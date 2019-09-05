@@ -72,7 +72,10 @@ class BetaAdvantageActorCritic(object):
 
         tf.summary.scalar("entropy", self.mean_entropy)
         tf.summary.scalar("value", self.mean_value)
-        tf.summary.histogram("actions", self.actions_taken)
+
+        self.actions_splitted = tf.unstack(self.actions_taken, axis=1)
+        for i in range(len(self.actions_splitted)):
+            tf.summary.histogram("actions_%d"%i, self.actions_splitted[i])
         tf.summary.scalar("alphas", tf.reduce_mean(self.action_alphas))
         tf.summary.scalar("betas", tf.reduce_mean(self.action_alphas))
 

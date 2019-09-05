@@ -82,7 +82,7 @@ class Car(object):
 
 
 class MPCarEnv(object):
-    def __init__(self, allow_red_to_enter_target_zone=False, force_fair_game=False, speed_limits=(-2, 10), throttle_scale=0.2, steer_scale=5e-1, max_steps=1000, add_player_num_to_state=False):
+    def __init__(self, allow_red_to_enter_target_zone=False, force_fair_game=False, speed_limits=(-2, 10), throttle_scale=0.2, steer_scale=5e-1, max_steps=1000, add_player_num_to_state=False, reversing_cost=0.0):
         self.car_1 = None
         self.car_2 = None
         self.target = None
@@ -96,6 +96,7 @@ class MPCarEnv(object):
         self.steer_scale = steer_scale
         self.max_steps = max_steps
         self.add_player_num_to_state = add_player_num_to_state
+        self.reversing_cost = reversing_cost
 
     def reset(self):
         self.target = random.randint(0, screen_width - 1), random.randint(0, screen_height - 1)
@@ -144,6 +145,10 @@ class MPCarEnv(object):
 
         r_1 = (prev_dist_1 - dist_1) / scale_factor - 0.001
         r_2 = (prev_dist_2 - dist_2) / scale_factor - 0.001
+
+        r_1 -= self.reversing_cost if self.car_1.speed < 0 else 0
+        r_2 -= self.reversing_cost if self.car_2.speed < 0 else 0
+
 
         if not is_in_bounds(self.car_1.x, self.car_1.y) or self.steps > self.max_steps:
             r_1 -= 1

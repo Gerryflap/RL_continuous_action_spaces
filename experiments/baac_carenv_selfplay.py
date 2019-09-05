@@ -38,6 +38,9 @@ warmup_episodes = 20000
 agent_picking_chance = 0.3
 max_agents = 20
 gamma = 0.97
+warmup_backwards_cost = 0.01
+# Add something here to make the filename unique if multiple experiments are being run:
+extra_name_addition = "reg_0.01_1"
 
 
 # Code starts here
@@ -97,12 +100,16 @@ p_model, v_model = make_models()
 
 
 
+
 log_name = "ac_carenv_%f"%gamma
 if terminate_without_terminal_state:
     log_name += "_no_term"
 
 if action_repeat_frames > 1:
     log_name += "_rep_%d"%(action_repeat_frames,)
+
+if extra_name_addition:
+    log_name += "_" + extra_name_addition
 
 agent = baac.BetaAdvantageActorCritic(p_model, v_model, 2, entropy_factor=0.01, gamma=gamma, lr=0.0004, lambd=0.99, value_loss_scale=0.001, ppo_eps=0.2, log=True, log_name=log_name)
 
@@ -119,11 +126,12 @@ def clone_agent(agent):
 # Previously max_steps = 10
 env = multiplayer_car_env.MPCarEnv(
     max_steps=10000000 if terminate_without_terminal_state else max_steps*action_repeat_frames,
-    allow_red_to_enter_target_zone=True,
+    allow_red_to_enter_target_zone=False,
     force_fair_game=True,
     speed_limits=(-2, 20),
     throttle_scale=0.5,
     steer_scale=0.2,
+    reversing_cost=warmup_backwards_cost,
     add_player_num_to_state=True)
 
 
@@ -219,6 +227,10 @@ try:
                 trajectory += trajectory_1
             else:
                 trajectory += trajectory_2
+
+            # Change backwards cost after pre-training/warmup
+            if episode == warmup_episodes:
+                env.reversing_cost = 0.0
 
             if episode%batch_size == 0:
                 if first == 0:
