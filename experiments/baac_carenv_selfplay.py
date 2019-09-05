@@ -40,7 +40,7 @@ max_agents = 20
 gamma = 0.97
 warmup_backwards_cost = 0.01
 # Add something here to make the filename unique if multiple experiments are being run:
-extra_name_addition = "reg_0.01_1"
+extra_name_addition = "normal_2"
 
 
 # Code starts here
@@ -126,7 +126,7 @@ def clone_agent(agent):
 # Previously max_steps = 10
 env = multiplayer_car_env.MPCarEnv(
     max_steps=10000000 if terminate_without_terminal_state else max_steps*action_repeat_frames,
-    allow_red_to_enter_target_zone=False,
+    allow_red_to_enter_target_zone=True,
     force_fair_game=True,
     speed_limits=(-2, 20),
     throttle_scale=0.5,

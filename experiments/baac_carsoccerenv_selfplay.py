@@ -4,6 +4,7 @@
         Balance issues may occur
 """
 import random
+import threading
 import time
 from collections import defaultdict
 
@@ -29,11 +30,47 @@ ks = tf.keras
 # This option is currently broken and should stay on false
 terminate_without_terminal_state = False
 
-action_repeat_frames = 10
-max_steps = 40
-agent_cloning_interval = 2500
+action_repeat_frames = 4
+max_steps = 50
+batch_size = 10
+# In number of episodes: (WARNING: Tensorboard shows number of training updates, which is episodes/batch_size)
+agent_cloning_interval = 5000
+# Number of episodes before agent switching will begin (useful for pre-training)
+warmup_episodes = 20000
 agent_picking_chance = 0.3
+max_agents = 20
 gamma = 0.97
+warmup_backwards_cost = 0.01
+# Add something here to make the filename unique if multiple experiments are being run:
+extra_name_addition = "normal_2"
+
+
+# Code starts here
+fps_lock = False
+show_screen = False
+
+def command_loop():
+    global fps_lock
+    global show_screen
+    while True:
+        inp = input("Enter command (help for help): ")
+        if inp == "help":
+            print("Commands: \n\thelp: displays help.\n\tslow: locks fps to 60 when drawing\n\tfast: unlocks fps when drawing")
+        elif inp == "slow":
+            fps_lock = True
+            print("locking fps...")
+        elif inp == "fast":
+            fps_lock = False
+            print("unlocking fps...")
+        elif inp == "show":
+            show_screen = True
+            print("drawing started.")
+        elif inp == "stop show":
+            print("drawing is stopped.")
+            show_screen = False
+
+
+threading.Thread(target=command_loop).start()
 
 def make_models():
     inp = ks.Input((11,))
@@ -157,8 +194,9 @@ try:
                     (new_state_1, new_state_2), (r1, r2), done, _ = env.step(actions_1, actions_2)
                     r1t += r1
                     r2t += r2
-                    if episode % 200 == 0 and episode != 0:
-                        # time.sleep(1 / 60)
+                    if show_screen:
+                        if fps_lock:
+                            time.sleep(1 / 60)
                         env.draw()
                     if done:
                         break
@@ -180,7 +218,11 @@ try:
             else:
                 trajectory += trajectory_2
 
-            if episode%10 == 0:
+            # Change backwards cost after pre-training/warmup
+            if episode == warmup_episodes:
+                env.reversing_cost = 0.0
+
+            if episode%batch_size == 0:
                 if first == 0:
                     agent_1.train(sess, trajectory)
                 else:
@@ -195,9 +237,12 @@ try:
             else:
                 outcome = 0
 
-            if episode % agent_cloning_interval == 0:
+            if episode % agent_cloning_interval == 0 and episode >= warmup_episodes:
                 old_agents.append(previous_agent)
+                if len(old_agents) > max_agents:
+                    old_agents = old_agents[-max_agents:]
                 previous_agent = clone_agent(agents[0])
+                print("Old agents length: ", len(old_agents))
                 pass
 
             # if episode % 20000 == 0:
@@ -211,4 +256,5 @@ try:
 
 except KeyboardInterrupt:
     pass
+
 
