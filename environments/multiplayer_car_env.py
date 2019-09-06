@@ -118,6 +118,19 @@ class MPCarEnv(object):
         self.steps = 0
         return self.__state__()
 
+    def reset_fixed_positions(self):
+        self.target = screen_width//10, screen_height//10
+
+        self.car_1 = Car(screen_width*9//10, screen_height*6//10,
+                         self.speed_limits, self.throttle_scale, self.steer_scale)
+
+        self.car_2 = Car(screen_width//10, screen_height*5//10,
+                         self.speed_limits, self.throttle_scale, self.steer_scale, color=(200, 50, 50))
+        self.done = False
+        self.steps = 0
+        return self.__state__()
+
+
     def draw(self):
         if self.surf is None:
             pygame.init()

@@ -39,8 +39,9 @@ agent_picking_chance = 0.3
 max_agents = 20
 gamma = 0.97
 warmup_backwards_cost = 0.01
+fixed_spawn_positions = True
 # Add something here to make the filename unique if multiple experiments are being run:
-extra_name_addition = "normal_2"
+extra_name_addition = ""
 
 
 # Code starts here
@@ -107,6 +108,9 @@ if terminate_without_terminal_state:
 
 if action_repeat_frames > 1:
     log_name += "_rep_%d"%(action_repeat_frames,)
+
+if fixed_spawn_positions:
+    log_name += "_fixed"
 
 if extra_name_addition:
     log_name += "_" + extra_name_addition
@@ -181,7 +185,10 @@ try:
             agent_2 = agents[1-first]
 
             # state_1, state_2 = env.reset_random()
-            state_1, state_2 = env.reset()
+            if fixed_spawn_positions:
+                state_1, state_2 = env.reset_fixed_positions()
+            else:
+                state_1, state_2 = env.reset()
 
             done = False
 
