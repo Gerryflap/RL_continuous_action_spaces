@@ -42,7 +42,7 @@ max_agents = 20
 gamma = 0.97
 warmup_backwards_cost = 0.01
 # Add something here to make the filename unique if multiple experiments are being run:
-extra_name_addition = "normal_2"
+extra_name_addition = "rand_warmup"
 
 
 # Code starts here
@@ -108,6 +108,9 @@ if terminate_without_terminal_state:
 if action_repeat_frames > 1:
     log_name += "_rep_%d"%(action_repeat_frames,)
 
+if extra_name_addition:
+    log_name += "_" + extra_name_addition
+
 agent = baac.BetaAdvantageActorCritic(p_model, v_model, 2, entropy_factor=0.0005, gamma=gamma, lr=0.0004, lambd=0.99, value_loss_scale=0.001, ppo_eps=0.2, log=True, log_name=log_name)
 
 def clone_agent(agent):
@@ -170,8 +173,11 @@ try:
             agent_1 = agents[first]
             agent_2 = agents[1-first]
 
-            # state_1, state_2 = env.reset_random()
-            state_1, state_2 = env.reset()
+            if warmup_episodes > episode:
+                # Use random spawns in pre-training/warmup
+                state_1, state_2 = env.reset_random()
+            else:
+                state_1, state_2 = env.reset()
 
             done = False
 
